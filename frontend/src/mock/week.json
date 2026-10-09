@@ -1,0 +1,46 @@
+{
+  "days": [
+    {
+      "date": "2026-10-09",
+      "worst_aqi": 345,
+      "worst_band": "Very Poor",
+      "best_hour": "15:00",
+      "worst_hour": "07:00"
+    },
+    {
+      "date": "2026-10-10",
+      "worst_aqi": 210,
+      "worst_band": "Poor",
+      "best_hour": "14:00",
+      "worst_hour": "08:00"
+    },
+    {
+      "date": "2026-10-11",
+      "worst_aqi": 180,
+      "worst_band": "Moderate",
+      "best_hour": "15:00",
+      "worst_hour": "06:00"
+    },
+    {
+      "date": "2026-10-12",
+      "worst_aqi": 150,
+      "worst_band": "Moderate",
+      "best_hour": "14:00",
+      "worst_hour": "09:00"
+    },
+    {
+      "date": "2026-10-13",
+      "worst_aqi": 95,
+      "worst_band": "Satisfactory",
+      "best_hour": "16:00",
+      "worst_hour": "08:00"
+    }
+  ],
+  "hourly": [
+    { "time": "2026-10-09T08:00:00+05:30", "pm25": 120, "pm10": 180, "pm25_cal": 150, "pm10_cal": 200, "aqi": 345, "band": "Very Poor", "calibrated": true },
+    { "time": "2026-10-09T10:00:00+05:30", "pm25": 90, "pm10": 140, "pm25_cal": 110, "pm10_cal": 160, "aqi": 280, "band": "Poor", "calibrated": true },
+    { "time": "2026-10-09T12:00:00+05:30", "pm25": 70, "pm10": 110, "pm25_cal": 80, "pm10_cal": 130, "aqi": 210, "band": "Poor", "calibrated": true },
+    { "time": "2026-10-09T14:00:00+05:30", "pm25": 50, "pm10": 80, "pm25_cal": 55, "pm10_cal": 95, "aqi": 120, "band": "Moderate", "calibrated": true },
+    { "time": "2026-10-09T16:00:00+05:30", "pm25": 60, "pm10": 90, "pm25_cal": 65, "pm10_cal": 105, "aqi": 145, "band": "Moderate", "calibrated": true }
+  ]
+}

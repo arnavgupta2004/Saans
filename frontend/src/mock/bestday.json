@@ -1,0 +1,35 @@
+{
+  "ranking": [
+    {
+      "date": "2026-10-13",
+      "max_aqi": 85,
+      "mean_aqi": 60,
+      "band": "Satisfactory"
+    },
+    {
+      "date": "2026-10-12",
+      "max_aqi": 120,
+      "mean_aqi": 95,
+      "band": "Moderate"
+    },
+    {
+      "date": "2026-10-11",
+      "max_aqi": 160,
+      "mean_aqi": 130,
+      "band": "Moderate"
+    },
+    {
+      "date": "2026-10-10",
+      "max_aqi": 210,
+      "mean_aqi": 180,
+      "band": "Poor"
+    },
+    {
+      "date": "2026-10-09",
+      "max_aqi": 280,
+      "mean_aqi": 250,
+      "band": "Poor"
+    }
+  ],
+  "reason": "Tuesday, 13 Oct has the lowest forecasted AQI (85, Satisfactory) during your selected window."
+}
