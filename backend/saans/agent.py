@@ -149,8 +149,11 @@ def _model(model_id: str | None = None):
     return BedrockModel(model_id=model_id or _env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
 
 
+_GEMINI_MIN_DEADLINE_S = 10.0  # Gemini returns 400 "Minimum allowed deadline is 10s" for anything shorter
+
+
 def _attempt_timeout_s() -> float:
-    return float(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "6"))
+    return max(_GEMINI_MIN_DEADLINE_S, float(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "10")))
 
 
 def _provider() -> str:
@@ -233,7 +236,7 @@ def ask(school_id: str, question: str, lang: str = "en", replay: str | None = No
     sink: list[Any] = []
     context = f"[school_id={school_id}] [lang={lang}]" + (f" [context: recorded replay day '{replay}', not today]" if replay else "")
     # API Gateway cuts requests at 30 s; give the model a budget and fall back to the plan summary if it is slow.
-    budget = float(os.getenv("AGENT_TIMEOUT_S", "20"))
+    budget = float(os.getenv("AGENT_TIMEOUT_S", "24"))
     pool = ThreadPoolExecutor(max_workers=1)
     future = pool.submit(_run_agent, make_tools(replay, sink), f"{context} {question}", time.monotonic() + budget)
     try:
