@@ -1,6 +1,6 @@
 # Saans — 3:00 demo video
 
-Pace: ~130 words per minute, short sentences, pauses at "·". Total voice-over ≈ 370 words.
+Pace: ~100–110 words per minute with pauses, short sentences. Total voice-over ≈ 285 words, leaving room to breathe.
 Record the app in a **phone-sized browser window (375×812)**, screen at 1080p. Captions are burned in (many judges watch muted).
 
 ## Shot list and voice-over
