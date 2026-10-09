@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Claude — Fri 9 Oct 2026, 19:00 IST (T10, T11 done)
+**Last updated:** Claude — Fri 9 Oct 2026, 19:20 IST (T17 done)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,10 +12,10 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T08 leftovers check / T12 SAM deploy skeleton (needs human AWS keys, T02) or T17 agent.py
-- **Where:** `backend/template.yaml` (not yet created) / `backend/saans/agent.py` (empty)
-- **Done so far:** T09, T10, T11 done; backend 56 tests passing.
-- **Next concrete step:** T17 Strands agent tools wrapping planner/best_day/build_notice (no AWS needed for tool tests); then T12 once keys exist.
+- **Task:** T18 — `/notice?polish=true`
+- **Where:** `backend/app.py` `notice()` + `saans/agent.py`
+- **Done so far:** T09–T11, T17; /api/ask calls agent, falls back on error. 58 tests pass.
+- **Next concrete step:** polish=true: ask agent to rewrite template without changing numbers; regex-verify all numbers present, else return template. Then T12 SAM template (needs human AWS keys, T02).
 - **Commands:** `cd backend && .venv/bin/python -m pytest -q`
 
 ---
@@ -54,8 +54,8 @@
 | T14 | Frontend onboarding | Antigravity | T10 | IN PROGRESS (Cursor, 18:05 IST) | Reduced scope: city presets + geolocation, no map. |
 | T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Ranking comes from `getBestDay` (planner.best_day); frontend only displays. Mock until T10. |
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
-| T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | TODO | |
-| T18 | /api/ask + polished notice | Cursor | T17 | TODO | |
+| T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
+| T18 | /api/ask + polished notice | Cursor | T17 | IN PROGRESS (Claude) | /api/ask wired to agent with deterministic fallback; `polish=true` still 501 (needs number-check vs plan). |
 | T19 | Daily EventBridge job | Cursor | T12 | TODO | |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | TODO | cut #1 if late |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |

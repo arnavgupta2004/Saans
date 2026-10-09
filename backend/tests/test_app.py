@@ -27,3 +27,12 @@ def test_school_and_planning_endpoints(monkeypatch) -> None:
 
 def test_unknown_school_is_404() -> None:
     assert TestClient(api.app).get("/api/schools/missing").status_code == 404
+
+
+def test_ask_falls_back_when_agent_fails(monkeypatch) -> None:
+    import saans.agent as agent
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no bedrock")))
+    c = TestClient(api.app)
+    sid = c.get("/api/schools").json()[0]["id"]
+    r = c.post("/api/ask", json={"school_id": sid, "question": "x"})
+    assert r.status_code == 200 and r.json()["tools_used"] == []

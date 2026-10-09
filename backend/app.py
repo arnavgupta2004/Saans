@@ -104,10 +104,14 @@ class AskRequest(BaseModel):
 @app.post("/api/ask")
 def ask(request: AskRequest) -> dict:
     _school_or_404(request.school_id)
-    answer = "Saans' assistant is not configured yet. Please use today's deterministic safety plan."
-    if request.lang == "hi":
-        answer = "Saans सहायक अभी कॉन्फ़िगर नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"
-    return {"answer": answer, "tools_used": []}
+    try:
+        from saans.agent import ask as agent_ask
+        return agent_ask(request.school_id, request.question, request.lang)
+    except Exception:
+        answer = "Saans' assistant is unavailable right now. Please use today's deterministic safety plan."
+        if request.lang == "hi":
+            answer = "Saans सहायक अभी उपलब्ध नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"
+        return {"answer": answer, "tools_used": []}
 
 
 handler = Mangum(app)
