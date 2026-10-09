@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from saans.forecast import load_forecast
 from saans.models import DayPlan, School
+from saans.sources import load_replay
 from saans.planner import best_day, plan_day, plan_week
 from saans.store import SchoolStore, get_store
 
@@ -36,10 +37,17 @@ def _forecast(school: School) -> tuple[list[dict], dict, str]:
 
 
 def _day_plan(school: School, replay: str | None = None) -> DayPlan:
+    if replay:
+        try:
+            rows, recorded = load_replay(replay)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"Unknown replay '{replay}'") from exc
+        source = {"forecast": "recorded", "observation": "none"}
+        return plan_day(school, rows, recorded, source, "replay", replay_date=recorded)
     rows, source, mode = _forecast(school)
-    date = replay or rows[0]["time"][:10]
+    date = rows[0]["time"][:10]
     try:
-        return plan_day(school, rows, date, source, "replay" if replay else mode)
+        return plan_day(school, rows, date, source, mode)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=f"No forecast for {date}") from exc
 

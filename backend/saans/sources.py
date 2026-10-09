@@ -103,3 +103,11 @@ class CpcbClient:
             result={**parse_cpcb_records(_load("cpcb_documented_response.json")["records"],lat,lon),"source":"fixture","age_s":0}
             return result  # fixtures are never cached
         return _Cache.put(key,result)
+
+
+REPLAYS = {"delhi-nov": "replay_delhi_nov.json"}
+
+def load_replay(key: str) -> tuple[list[dict[str, Any]], str]:
+    """Recorded real bad-air day. Returns (hourly rows labelled source='replay', recorded date). KeyError if unknown."""
+    data = _load(REPLAYS[key]); h = data["hourly"]
+    return [{"time": t, "pm25": a, "pm10": b, "source": "replay"} for t, a, b in zip(h["time"], h["pm2_5"], h["pm10"])], data["date"]

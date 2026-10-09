@@ -9,12 +9,12 @@ import mockNoticeHi from './mock/notice_hi.json';
 const USE_MOCK = false;
 const API_URL = `${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')}/api`;
 
-export const getDayPlan = async (schoolId: string, replayDate?: string): Promise<DayPlan> => {
+export const getDayPlan = async (schoolId: string, replay?: string): Promise<DayPlan> => {
   if (USE_MOCK) {
     return mockDayPlan as DayPlan;
   }
   
-  const query = replayDate ? `?replay=${replayDate}` : '';
+  const query = replay ? `?replay=${encodeURIComponent(replay)}` : '';
   const response = await fetch(`${API_URL}/schools/${schoolId}/today${query}`);
   if (!response.ok) {
     throw new Error('Failed to fetch day plan');

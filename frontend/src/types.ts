@@ -77,6 +77,7 @@ export interface DayPlan {
   sources: Sources;
   mode: 'live' | 'cached' | 'fixture' | 'replay';
   generated_at: string;
+  replay_date?: string | null;
 }
 
 /** GET /api/schools/{id}/week — planner owns AQI/band fields */

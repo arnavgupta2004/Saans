@@ -54,3 +54,24 @@ def test_agent_failure_is_logged_with_traceback(monkeypatch, caplog) -> None:
     with caplog.at_level("ERROR"):
         c.post("/api/ask", json={"school_id": sid, "question": "x"})
     assert any(r.exc_info and "boom-bedrock" in str(r.exc_info[1]) for r in caplog.records)
+
+
+def test_replay_delhi_nov_shows_indoors_and_a_swap() -> None:
+    c = TestClient(api.app)
+    r = c.get("/api/schools/delhi-anand-vihar/today?replay=delhi-nov")
+    assert r.status_code == 200
+    plan = r.json()
+    assert plan["mode"] == "replay" and plan["replay_date"] == "2025-11-19" and plan["date"] == "2025-11-19"
+    assert plan["sources"]["forecast"] == "recorded" and plan["now"]["time"] == "2025-11-19T08:00"
+    assert any(p["action"]["level"] == "indoors" for p in plan["periods"])
+    assert any(p["swap"] for p in plan["periods"])
+    assert plan["generated_at"].endswith("+05:30")
+
+
+def test_unknown_replay_is_404() -> None:
+    assert TestClient(api.app).get("/api/schools/delhi-anand-vihar/today?replay=nope").status_code == 404
+
+
+def test_live_plan_has_no_replay_date(monkeypatch) -> None:
+    monkeypatch.setattr(api, "_forecast", lambda school: (_rows(), {"forecast": "live", "observation": "none"}, "live"))
+    assert TestClient(api.app).get("/api/schools/delhi-anand-vihar/today").json()["replay_date"] is None

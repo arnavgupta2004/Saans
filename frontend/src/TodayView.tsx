@@ -8,12 +8,13 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [replay, setReplay] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
       setLoading(true);
       try {
-        const data = await getDayPlan(activeSchoolId);
+        const data = await getDayPlan(activeSchoolId, replay ? 'delhi-nov' : undefined);
         setPlan(data);
       } catch (err) {
         setError('Could not load plan');
@@ -22,7 +23,7 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
       }
     };
     fetchPlan();
-  }, [activeSchoolId]);
+  }, [activeSchoolId, replay]);
 
   if (loading) {
     return (
@@ -44,6 +45,12 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200 relative">
+      {plan.mode === 'replay' && (
+        <div className="bg-purple-600 text-white px-5 py-2.5 text-sm font-semibold flex items-center justify-between gap-3" role="status">
+          <span>Replay: recorded data from {plan.replay_date ?? plan.date}</span>
+          <button onClick={() => setReplay(false)} className="text-xs underline underline-offset-2 shrink-0">Back to live</button>
+        </div>
+      )}
       {/* Header Banner */}
       <header className="bg-white px-5 pt-6 pb-5 rounded-b-3xl shadow-sm relative z-10">
         <div className="flex justify-between items-start mb-4">
@@ -75,6 +82,14 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
           </div>
         )}
       </header>
+
+      {!replay && (
+        <div className="px-5 mt-4 text-right">
+          <button onClick={() => setReplay(true)} className="text-xs font-semibold text-purple-700 underline underline-offset-2">
+            Try a bad-air day
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="px-5 mt-6 space-y-4 relative z-0">
@@ -148,8 +163,9 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
       {/* Footer */}
       <footer className="mt-8 px-6 text-center pb-6">
         <p className="text-xs text-slate-400 font-medium">
-          Source: {sources.forecast} forecast calibrated with {sources.observation} 
-          {sources.station ? ` (${sources.station})` : ''}
+          {plan.mode === 'replay'
+            ? `Source: recorded Open-Meteo data for ${plan.replay_date ?? plan.date} (not live, not calibrated)`
+            : `Source: ${sources.forecast} forecast${now?.calibrated ? ` calibrated with ${sources.observation}${sources.station ? ` (${sources.station})` : ''}` : ' (not calibrated)'}`}
         </p>
         <p className="text-[10px] text-slate-300 mt-1">
           Last updated: {new Date(plan.generated_at).toLocaleString()}

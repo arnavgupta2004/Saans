@@ -75,7 +75,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T19 | Daily EventBridge job | Cursor | T12 | TODO | |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | TODO | cut #1 if late |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
-| T22 | Replay mode | Any | T09, T13 | TODO | |
+| T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
 | T23 | Resilience pass | Antigravity | T21 | TODO | |
 | T24 | UI polish | Antigravity | T13–T16 | TODO | |
 | T25 | README | Any | T21 | TODO | |
@@ -91,6 +91,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Planner honesty + swap rule (Claude): (1) only outdoor periods get rules.py actions/swaps; indoor = `go`, "Indoor class — no change needed", `SAANS-INDOOR`. (2) Calibrate only with a live (or cached <2h) CPCB reading ≤25 km and station timestamp <2h; fixtures are never cached or relabelled "cached"; `DayPlan.mode` = FORECAST source, `sources.observation` separate; calibration ratio anchored on the current IST hour (was hour 0). (3) Swap rule changed (PLAN §3.3): outdoor+`indoors` period → cheapest same-day swappable slot (08:00–15:00) giving `go`/`caution`; replaces "2+ bands better". (4) `DayPlan.now` = current IST hour; worst/best hour over 07:00–16:00; `generated_at` IST with offset. (5) Seed PE labels match grade; two grades/school; period ids now `p0..p9` (re-seed Dynamo). (6) Agent failures logged via `logger.exception`. (7) `MODEL_PROVIDER=gemini` uses Strands `GeminiModel` (`strands-agents[gemini]`, `GEMINI_API_KEY` NoEcho SAM param, `GEMINI_MODEL_ID` default gemini-2.5-flash); Bedrock stays default. Added `saans/forecast.py` (shared loader for app + agent).
 - 2026-10-09 — aqi.py bugfix (Claude): CPCB breakpoint gaps (60→61, 100→101, 250→251…) made decimal concentrations such as PM2.5 60.1 return AQI 500/Severe; bands are now contiguous. Found in live /today output. Needs redeploy.
 - 2026-10-09 — CPCB parser (Claude): real data.gov.in rows use `pollutant_avg` (+ "NA" strings); old parser only knew `avg_value`, so live always fell to the fixture silently. Now handles pollutant_avg/avg_value, "NA", groups by station, nearest with PM2.5, and logs the exact failure reason (logger.warning). UNVERIFIED against a real response: `backend/fixtures/cpcb_live_sample.json` was missing from the repo and api.data.gov.in is unreachable from the agent sandbox. Human: capture a sample (see chat) and commit it.
+- 2026-10-09 — Replay (Claude): `replay` query param is now a recording key (`delhi-nov`), not a date; unknown key → 404. Replay uses sources.forecast="recorded", observation "none", uncalibrated; `now` = 08:00 reading. Footer no longer claims "calibrated" unless `now.calibrated`.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
