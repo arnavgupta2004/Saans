@@ -5,7 +5,7 @@
 
 **Last updated:** Claude — Fri 9 Oct 2026 (planner honesty + swap rule fixes)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
-**Deployed API URL:** _(none yet)_
+**Deployed API URL:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com
 **Deployed frontend URL:** _(none yet)_
 **Repo:** _(add GitHub URL)_
 
@@ -68,7 +68,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T09 | planner.py + tests | Cursor | T06, T07, T08 | DONE | Planner rules tested (51 passed). Fixture E2E table: `PE | 362 | Very Poor | indoors | 13:00–13:40 (AQI 33, Good)`. |
 | T10 | app.py endpoints | Cursor | T09 | DONE | §6 endpoints + CORS + Mangum; /api/ask is a stub until T18; notice polish returns 501. |
 | T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | DONE | Deterministic EN/HI, mode label, wa.me URL; 3 tests. |
-| T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
+| T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | DONE | Verified 9 Oct 21:20 IST: /today live (calibrated live:openaq, 8.4 km), replay=delhi-nov (PE ⇄ Period 8, 351→127), /api/ask via Gemini used get_day_plan. |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |
 | T14 | Frontend onboarding | Antigravity | T10 | IN PROGRESS (Cursor, 18:05 IST) | Reduced scope: city presets + geolocation, no map. |
 | T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Ranking comes from `getBestDay` (planner.best_day); frontend only displays. Mock until T10. |
@@ -101,6 +101,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Swap = exchange (Claude): only swappable outdoor periods move; target must be an indoor swappable class period 08:00–15:00; each target used once (greedy, worst AQI first, lowest-AQI free target); optional (caution→go) follows the same rules. Swap gains `with_period_id`, `with_label`. Replay: Class 7B PE 08:40 ⇄ Period 8 13:40 · AQI 351 → 127. PLAN §3.3 rewritten.
 - 2026-10-09 — Model ids from env only (Claude): live error 404 "models/gemini-2.5-flash is no longer available to new users". `GeminiModelId` SAM param (default gemini-3.8-flash) → `GEMINI_MODEL_ID`; `BEDROCK_MODEL_ID` likewise required from env. No model names in code; missing env → RuntimeError → logged + deterministic fallback.
 - 2026-10-09 — Sources (Claude): data.gov.in refuses connections from AWS (ConnectError 111) → CPCB client connect timeout 3 s (read 10 s); chain unchanged CPCB → OpenAQ → uncalibrated. OpenAQ `sources.station` = location `name` via `GET /v3/locations/{id}` (cached; falls back to "OpenAQ location <id>" if lookup fails).
+- 2026-10-09 — Live verification (Claude): OpenAQ picked station "Air Check" (8.42 km) — possibly a low-cost/community sensor, not a CPCB reference monitor; README says "CPCB station data via OpenAQ". Consider restricting OpenAQ to reference monitors (locations `monitor=true` / CPCB provider). Agent phrased the source as "Air Check station forecast" (it is an Open-Meteo forecast calibrated with that station) — SYSTEM_PROMPT could be tightened.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
