@@ -264,3 +264,7 @@ def test_replay_prompt_context_names_recorded_date(monkeypatch) -> None:
 def test_system_prompt_does_not_invite_field_names() -> None:
     # Live answer once said "recorded data from replay_date 2025-11-19" because the prompt used the field name.
     assert "from replay_date" not in agent.SYSTEM_PROMPT and "field names" in agent.SYSTEM_PROMPT
+
+
+def test_system_prompt_explains_swap_optional_flag() -> None:
+    assert "optional=false" in agent.SYSTEM_PROMPT and "optional=true" in agent.SYSTEM_PROMPT

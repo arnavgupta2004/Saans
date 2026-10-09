@@ -88,7 +88,7 @@ export default function AskView({ activeSchoolId, replay }: { activeSchoolId: st
             </div>
             {turn.answer && (
               <div data-testid="ask-answer" className="max-w-[92%] bg-white border border-stone-200/80 rounded-2xl rounded-bl-md px-3.5 py-3">
-                <p className="text-sm text-stone-800 whitespace-pre-line leading-relaxed break-words">{turn.answer.answer.replace(/\*\*/g, '')}</p>
+                <p className="text-sm text-stone-800 whitespace-pre-line leading-relaxed break-words">{turn.answer.answer.replace(/\*+/g, '')}</p>
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                   {turn.answer.verified ? (
                     <span className="text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{replay ? t('numbersCheckedReplay') : t('numbersChecked')}</span>
