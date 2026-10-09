@@ -117,6 +117,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — T19 (Claude): template env vars moved to `Globals.Function` (shared by ApiFunction + DailyFunction); output `DailyFunctionName`. Plan cache = `PlanCache` protocol in store.py (`JsonPlanCache` local at data/plan_cache.json, git-ignored; `DynamoPlanCache` stores body as JSON string). tests/conftest.py isolates the local cache.
 - 2026-10-09 — T23 (Claude): new frontend devDependency `vitest@3.2.4` (`npm test`) for `src/utils/banner.ts`. No backend code changes were needed — all failure scenarios already returned 200 with honest labels.
 - 2026-10-09 — Alarms (Claude): CloudWatch alarms `saans-api-errors` and `saans-daily-errors` (Lambda Errors Sum ≥ 5 in 300 s, missing data = not breaching). No notification action yet (no email/SNS configured) — visible in CloudWatch console.
+- 2026-10-09 — Gemini fallback model (Claude): human listed models with their key; `gemini-3.8-flash-lite` does not exist (only `-tts`). `GeminiFallbackModelId` default → `gemini-3.5-flash-lite` (stable text model, different generation from primary). Note: being listed ≠ usable (gemini-2.5-flash is listed but 404s for new users).
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
