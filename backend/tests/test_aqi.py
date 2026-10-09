@@ -34,3 +34,12 @@ def test_band_metadata_covers_every_aqi_band() -> None:
     assert set(BAND_METADATA) == {"Good", "Satisfactory", "Moderate", "Poor", "Very Poor", "Severe"}
     assert band_for_aqi(400) == "Very Poor"
     assert band_for_aqi(401) == "Severe"
+
+
+def test_decimal_values_in_breakpoint_gaps_are_not_severe() -> None:
+    from saans.aqi import naqi, sub_index
+    assert naqi(60.1, 158.8) == (139, "Moderate", "pm10")
+    assert sub_index("pm25", 60.5) == 101 and sub_index("pm10", 100.5) == 100
+    assert sub_index("pm25", 30.5) == 51 and sub_index("pm25", 250.5) == 401
+    assert sub_index("pm25", 350.0) == 500 and sub_index("pm25", 351) == 500
+    assert sub_index("pm25", 0) == 0

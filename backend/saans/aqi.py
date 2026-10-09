@@ -55,11 +55,13 @@ def sub_index(pollutant: Pollutant, conc: float | int | None) -> int | None:
     if concentration < 0 or not isfinite(concentration):
         return None
 
-    for concentration_low, concentration_high, index_low, index_high in BREAKPOINTS[pollutant]:
-        if concentration_low <= concentration <= concentration_high:
-            index = (index_high - index_low) / (concentration_high - concentration_low) * (concentration - concentration_low) + index_low
-            return min(500, round(index))
-    return 500
+    # Bands are treated as contiguous: a decimal in a gap (e.g. 60.1 between 60 and 61) belongs to the band below.
+    bands = BREAKPOINTS[pollutant]
+    if concentration > bands[-1][1]:
+        return 500
+    concentration_low, concentration_high, index_low, index_high = next(b for b in reversed(bands) if concentration >= b[0])
+    index = (index_high - index_low) / (concentration_high - concentration_low) * (concentration - concentration_low) + index_low
+    return min(500, round(index))
 
 
 def band_for_aqi(aqi: int) -> str:
