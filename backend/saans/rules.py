@@ -63,12 +63,14 @@ def _normal_action(band: str, intensity: str, activity: str) -> Action:
             rule_id,
         )
     if band == "Very Poor":
-        return Action(
-            "indoors",
-            f"Hold {activity} indoors; use the PA system or classroom for assembly.",
-            "गतिविधि अंदर करें; असेंबली के लिए पीए सिस्टम या कक्षा का उपयोग करें।",
-            rule_id,
-        )
+        if activity == "assembly":
+            return Action(
+                "indoors",
+                "Hold assembly indoors; use the PA system or classrooms.",
+                "असेंबली अंदर करें; पीए सिस्टम या कक्षा का उपयोग करें।",
+                rule_id,
+            )
+        return Action("indoors", f"Hold {activity} indoors.", "गतिविधि अंदर करें।", rule_id)
     return Action(
         "indoors",
         f"Hold {activity} indoors. Inform management and follow state or GRAP directives.",

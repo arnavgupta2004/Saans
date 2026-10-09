@@ -59,3 +59,11 @@ def test_activity_name_is_reflected_in_regular_action() -> None:
 def test_invalid_rule_inputs_fail_loudly(intensity: str, band: str) -> None:
     with pytest.raises(ValueError):
         action_for("pe", intensity, band)
+
+
+def test_very_poor_pa_system_text_only_for_assembly() -> None:
+    from saans.rules import action_for
+    pe = action_for("pe", "high", "Very Poor")
+    assert pe.level == "indoors" and "assembly" not in pe.text_en and "PA system" not in pe.text_en and "असेंबली" not in pe.text_hi
+    asm = action_for("assembly", "low", "Very Poor")
+    assert asm.level == "indoors" and "PA system" in asm.text_en and "असेंबली" in asm.text_hi
