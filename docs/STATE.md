@@ -16,9 +16,10 @@
 ```
 cd backend
 sam build --use-container
-sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY ModelProvider=gemini GeminiApiKey=$GEMINI_API_KEY
+sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY ModelProvider=gemini GeminiApiKey=$GEMINI_API_KEY OpenAqApiKey=$OPENAQ_API_KEY
 AWS_DEFAULT_REGION=us-east-1 STORE=dynamo .venv/bin/python scripts/seed_dynamo.py saans-schools   # or ../.venv/bin/python
 ```
+- Then Amplify (manual deploy): `cd frontend && VITE_API_URL=$URL npm run build && (cd dist && zip -r ../dist.zip .)`, upload `frontend/dist.zip` in Amplify → app → Deploy updates. Needed: capture real CPCB sample into `backend/fixtures/cpcb_live_sample.json` (item 2 unverified).
 - (older notes below)
 - **Done:** frontend wired to API (VITE_API_URL, default http://localhost:8000); `backend/template.yaml`, `backend/scripts/seed_dynamo.py` written. Not deployed: `aws` session expired and `docker` is not installed.
 - **Next (human):** `aws login` (or `aws configure`), install/start Docker Desktop, then from repo root:
@@ -47,6 +48,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026, 17:55 IST | Antigravity | not run | passed |
 | Fri 9 Oct 2026, 19:00 IST | Claude | 56 passed | not run |
 | Fri 9 Oct 2026 (fix commit) | Claude | 75 passed | not run |
+| Fri 9 Oct 2026 (OpenAQ commit) | Claude | 94 passed | passed |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
