@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Cursor — Fri 9 Oct 2026, 18:05 IST (best-day ranking from API only)
+**Last updated:** Codex — Fri 9 Oct 2026, 18:20 IST (T09 complete)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,11 +12,11 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T14 — Frontend onboarding (IN PROGRESS, Cursor)
-- **Where:** `frontend/src/OnboardingView.tsx`, `frontend/src/App.tsx`
-- **Done so far:** Best-day picker calls `getBestDay(schoolId, start, end)` and displays API `ranking` + `reason` only (mock). UI does not sort or derive bands.
-- **Next concrete step:** Finish reduced-scope T14 (city presets, geolocation, timetable editor, asthma count, 3-school switcher).
-- **Commands:** `cd frontend && npm run build`
+- **Task:** T10 — FastAPI endpoints
+- **Where:** `backend/app.py`
+- **Done so far:** T09 planner completed with deterministic period AQI, swaps, weekly and best-day planning.
+- **Next concrete step:** expose §6 endpoints with CORS and connect them to stores/planner.
+- **Commands:** `cd backend && .venv/bin/python -m pytest -q`
 
 ---
 
@@ -45,7 +45,7 @@
 | T06 | calibrate.py + tests | Cursor | T04, T05 | DONE | Bias ratio clipping, 12-hour decay, and uncalibrated distant/missing observation path tested. |
 | T07 | rules.py + tests | Cursor | T04 | DONE | Deterministic activity/sensitive-student protocol actions with simple Hindi text; every table cell tested. Tests: 41 passed; frontend build passed. |
 | T08 | models.py + store.py + seed schools | Cursor | T03 | TODO | |
-| T09 | planner.py + tests | Cursor | T06, T07, T08 | TODO | |
+| T09 | planner.py + tests | Cursor | T06, T07, T08 | DONE | Planner rules tested (51 passed). Fixture E2E table: `PE | 362 | Very Poor | indoors | 13:00–13:40 (AQI 33, Good)`. |
 | T10 | app.py endpoints | Cursor | T09 | TODO | |
 | T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | TODO | |
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
@@ -89,3 +89,4 @@
 | Fri 17:45 | Antigravity → next agent | T15 and T16 complete. Bottom tab navigation added. |
 | Fri 17:55 | Antigravity → next agent | T14 complete. Best day fixed to use API purely. |
 | Fri 18:05 | Cursor → Cursor | Best-day ranking typed and displayed from `getBestDay` only (no frontend ranking). T14 reduced-scope next. |
+| Fri 18:20 | Codex → next agent | T09 complete. Resume with T10 in `backend/app.py`. |
