@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Antigravity — Fri 9 Oct 2026, 17:45 IST (T15, T16 complete)
+**Last updated:** Antigravity — Fri 9 Oct 2026, 17:55 IST (T14 complete)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,11 +12,11 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T14 — Frontend onboarding (TODO)
-- **Where:** `frontend/src/`
-- **Done so far:** T15 (Week view) and T16 (Notice view) completed with mock data. Bottom tab navigation added.
-- **Next concrete step:** Implement the onboarding flow in a new view, with city preset or map pick (T14).
-- **Commands:** `cd frontend && npm run build`
+- **Task:** T08 — models.py + store.py + seed schools (TODO)
+- **Where:** `backend/saans/`
+- **Done so far:** Frontend UI (T13, T14, T15, T16) complete.
+- **Next concrete step:** Implement backend models and store (T08).
+- **Commands:** `cd backend && pytest -q`
 
 ---
 
@@ -29,6 +29,7 @@
 | Fri 9 Oct 2026, 16:47 IST | Codex | 20 passed | passed |
 | Fri 9 Oct 2026, 16:51 IST | Codex | 41 passed | passed |
 | Fri 9 Oct 2026, 17:45 IST | Antigravity | not run | passed |
+| Fri 9 Oct 2026, 17:55 IST | Antigravity | not run | passed |
 
 ---
 
@@ -48,7 +49,7 @@
 | T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | TODO | |
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |
-| T14 | Frontend onboarding | Antigravity | T10 | TODO | |
+| T14 | Frontend onboarding | Antigravity | T10 | DONE | Built with city presets and school switcher. |
 | T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Built with Recharts and mock data flag. |
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | TODO | |
@@ -84,3 +85,4 @@
 | Fri 16:51 | Codex → Antigravity | T07 complete. Resume with T05 in `backend/saans/sources.py`. |
 | Fri 17:00 | Antigravity → next agent | T13 complete in frontend/ with mock data. Ready for T14 or T15. |
 | Fri 17:45 | Antigravity → next agent | T15 and T16 complete. Bottom tab navigation added. |
+| Fri 17:55 | Antigravity → next agent | T14 complete. Best day fixed to use API purely. |
