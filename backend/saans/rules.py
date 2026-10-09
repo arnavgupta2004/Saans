@@ -1,0 +1,1 @@
+"""Deterministic school safety rules."""
