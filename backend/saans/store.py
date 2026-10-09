@@ -28,7 +28,7 @@ class DynamoStore:
  def get(self,school_id):
   item=self.table.get_item(Key={'id':school_id}).get('Item'); return School.model_validate(item) if item else None
  def save(self,school): self.table.put_item(Item=json.loads(school.model_dump_json(),parse_float=Decimal)); return school
-def get_store(): return DynamoStore() if os.getenv('STORE','json')=='dynamo' else JsonStore(Path(__file__).resolve().parents[1]/'data'/'schools.json')
+def get_store(): return DynamoStore() if os.getenv('STORE','json')=='dynamo' else JsonStore(os.getenv('SCHOOLS_PATH') or Path(__file__).resolve().parents[1]/'data'/'schools.json')
 
 
 class PlanCache(Protocol):

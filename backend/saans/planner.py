@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, date as Date
 from typing import Any
-from .aqi import naqi
+from .aqi import band_for_aqi, naqi
 from .models import DayPlan, HourPoint, Period, PeriodPlan, School, Sources, Swap
 from zoneinfo import ZoneInfo
 from .rules import INDOOR_ACTION, NO_DATA_ACTION, action_for
@@ -12,7 +12,8 @@ _RANK={"Good":0,"Satisfactory":1,"Moderate":2,"Poor":3,"Very Poor":4,"Severe":5}
 def _hour(value:str)->int: return int(value[11:13] if "T" in value else value[:2])
 def _in_period(point:dict[str,Any], period:Period)->bool:
  h=_hour(point["time"]); start=_hour(period.start); end=_hour(period.end)
- return start <= h <= end if period.end.endswith(":00") else start <= h <= end
+ # A period ending on the hour (09:20-10:00) does not use the 10:00-11:00 forecast hour.
+ return start <= h < end if period.end.endswith(":00") else start <= h <= end
 def _points(hourly:list[dict[str,Any]], period:Period)->list[dict[str,Any]]:
  return [p for p in hourly if _in_period(p,period)]
 def _point(row:dict[str,Any])->HourPoint:
@@ -75,6 +76,6 @@ def best_day(school:School,hourly_cal:list[dict[str,Any]], window_start:str, win
  ranking=[]
  for day in complete_days(hourly_cal)[:days]:
   values=[_point(p).aqi for p in hourly_cal if p["time"].startswith(day) and _hour(window_start)<=_hour(p["time"])<=_hour(window_end)]
-  if values: ranking.append({"date":day,"max_aqi":max(values),"mean_aqi":round(sum(values)/len(values),1),"band":naqi(max(p.get("pm25_cal",p["pm25"]) for p in hourly_cal if p["time"].startswith(day)),0)[1]})
+  if values: ranking.append({"date":day,"max_aqi":max(values),"mean_aqi":round(sum(values)/len(values),1),"band":band_for_aqi(max(values))})
  ranking.sort(key=lambda x:(x["max_aqi"],x["mean_aqi"]))
  return {"ranking":ranking,"reason":f"{ranking[0]['date']} has the lowest maximum AQI ({ranking[0]['max_aqi']}) in the selected window." if ranking else "No forecast data in the selected window."}

@@ -79,8 +79,10 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
   };
 
   const handleSave = async () => {
+    // Demo schools are read-only on the server; a new school gets its own id.
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'school';
     const school: School = {
-      id: activeSchoolId,
+      id: `custom-${slug}`,
       name,
       city: usingMyLocation
         ? 'My location'
@@ -201,7 +203,7 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
         <button type="button" onClick={handleSave} disabled={saveState === 'saving'} className="w-full bg-teal-700 text-white font-bold py-3 rounded-xl hover:bg-teal-800 transition flex items-center justify-center gap-2 disabled:opacity-60">
           <Save className="w-5 h-5" /> {saveState === 'saving' ? 'Saving…' : 'Save Configuration'}
         </button>
-        {saveState === 'saved' && <p className="text-center text-sm text-green-700 font-medium">Saved (mock API).</p>}
+        {saveState === 'saved' && <p className="text-center text-sm text-emerald-700 font-medium">Saved as a new school. The three demo schools stay unchanged.</p>}
         {saveState === 'error' && <p className="text-center text-sm text-red-600 font-medium">Could not save school.</p>}
       </main>
     </div>

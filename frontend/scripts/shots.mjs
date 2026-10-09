@@ -32,9 +32,9 @@ async function shot(page, name) {
 async function enableReplay(page) {
   await page.goto(`${BASE}/?replay=delhi-nov`, { waitUntil: 'networkidle' });
   await waitForPlan(page);
-  if (!(await page.getByText(/Replay: recorded data/).count())) {
+  if (!(await page.getByText(/Replay: recorded/).count())) {
     await page.getByRole('button', { name: /Try a bad-air day/i }).click();
-    await page.getByText(/Replay: recorded data/).waitFor({ timeout: 30000 });
+    await page.getByText(/Replay: recorded/).waitFor({ timeout: 30000 });
     await page.waitForTimeout(600);
   }
 }

@@ -15,7 +15,9 @@ from saans.forecast import load_forecast
 from saans.models import DayPlan, School
 from saans.sources import load_replay
 from saans.planner import IST, best_day, plan_day, plan_week
-from saans.store import SchoolStore, get_plan_cache, get_store
+from saans.store import SEED_SCHOOLS, SchoolStore, get_plan_cache, get_store
+
+DEMO_SCHOOL_IDS = {s.id for s in SEED_SCHOOLS}
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +91,8 @@ def list_schools() -> list[School]:
 
 @app.post("/api/schools", response_model=School)
 def save_school(school: School) -> School:
+    if school.id in DEMO_SCHOOL_IDS:
+        raise HTTPException(status_code=403, detail="Demo schools are read-only; save your school under a new id")
     return _store().save(school)
 
 

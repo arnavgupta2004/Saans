@@ -38,6 +38,8 @@ def load_forecast(school: School) -> tuple[list[dict[str, Any]], dict[str, Any],
     hourly = OpenMeteoClient().hourly(school.lat, school.lon)
     obs, note = observe(school.lat, school.lon)
     forecast = hourly[0].get("source", "live") if hourly else "fixture"
+    if forecast == "cached":
+        forecast = "live"  # Lambda's in-memory copy of a live fetch (< 1 h); mode "cached" is reserved for the 06:00 daily-job plan
     used = obs if observation_usable(obs) else None  # only name a station that actually calibrated the forecast
     source = {"forecast": forecast, "observation": _label(obs), "station": (used or {}).get("station"), "distance_km": (used or {}).get("distance_km"), "note": note}
     return calibrate(hourly, obs), source, forecast

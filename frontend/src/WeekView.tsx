@@ -134,7 +134,11 @@ export default function WeekView({ activeSchoolId = 'delhi-anand-vihar' }: { act
 
           {bestDayData && (
             <div className="mt-5 pt-5 border-t border-stone-100">
-              <p className="text-sm text-stone-700 font-medium mb-4">{bestDayData.reason}</p>
+              <p className="text-sm text-stone-700 font-medium mb-4">
+                {bestDayData.ranking[0]
+                  ? `${new Date(bestDayData.ranking[0].date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}: lowest maximum AQI (${bestDayData.ranking[0].max_aqi}) between ${bestDayStart} and ${bestDayEnd}.`
+                  : bestDayData.reason}
+              </p>
               <div className="space-y-2">
                 {bestDayData.ranking.map((rank, i) => (
                   <div key={rank.date} className="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-100">

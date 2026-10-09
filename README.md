@@ -11,7 +11,7 @@
 
 ## The problem
 
-- **Children are the most exposed.** WHO's 2018 report *Air pollution and child health: prescribing clean air* found that 93% of the world's children live with air pollution above WHO guideline levels, and linked air pollution to respiratory infections that killed 543,000 children under five in 2016. ([WHO, 2018](https://www.who.int/publications/i/item/WHO-CED-PHE-18-01)) Children breathe faster than adults and so take in more pollution for their body weight. [CITE — stated in WHO's press material for the report; not on the report page itself]
+- **Children are the most exposed.** WHO's 2018 report *Air pollution and child health: prescribing clean air* found that 93% of the world's children live with air pollution above WHO guideline levels, and linked air pollution to respiratory infections that killed 543,000 children under five in 2016. ([WHO, 2018](https://www.who.int/publications/i/item/WHO-CED-PHE-18-01))
 - **Short, bad days matter, not just annual averages.** A 2024 *Lancet Planetary Health* study of ten Indian cities (2008–2019) found that each 10 µg/m³ rise in two-day average PM2.5 was associated with 1.4% higher daily mortality, and attributed 7.2% of daily deaths to PM2.5 above the WHO guideline. ([de Bont et al., 2024, doi:10.1016/S2542-5196(24)00114-1](https://pmc.ncbi.nlm.nih.gov/articles/PMC11774940/))
 - **Schools only get blunt tools.** On 17 Nov 2024 Delhi's AQI hit 441 (Severe), GRAP Stage IV was invoked and physical classes were suspended across Delhi-NCR. ([ETV Bharat](https://www.etvbharat.com/en/!bharat/delhi-air-quality-atishi-school-classes-grap-stage-4-caqm-aqi-monday-enn24111800016), [SCC Online on the Supreme Court order](https://www.scconline.com/blog/?p=335496)) Between "normal day" and "school closed" there is nothing that tells a principal what to do with *period 2*.
 - **Air changes hour by hour.** In Delhi's winter, PM2.5 builds up overnight under a shallow mixing layer and falls as it rises after sunrise. ([Murthy et al., 2020, doi:10.1016/j.jastp.2019.105157](https://doi.org/10.1016/j.jastp.2019.105157)) A PE class at 08:40 and one at 13:40 can face very different air — on our recorded day, AQI 351 vs 127.
@@ -52,6 +52,10 @@ flowchart LR
   CAL --> OAQ[OpenAQ v3<br/>reference monitors]
   API -. errors .-> CW[Amazon CloudWatch alarms] --> SNS[Amazon SNS email]
 ```
+
+### What runs on AWS
+
+Everything that serves a request or runs on a schedule runs in our AWS account, defined in one SAM template: **2 Lambda functions, 1 HTTP API, 2 DynamoDB tables, 1 EventBridge schedule, 2 CloudWatch alarms, 1 SNS topic**, plus Amplify Hosting for the frontend. The agent is built with **Strands Agents (AWS open source)**. Only two things are outside AWS: the air-quality data providers (Open-Meteo, CPCB/OpenAQ) and — because Bedrock access was blocked on our account — the LLM, which Strands lets us point at Bedrock with one setting (`MODEL_PROVIDER=bedrock`).
 
 ### AWS services and why
 
@@ -115,11 +119,12 @@ Primary `gemini-3.5-flash-lite` → fallback `gemini-3.1-flash-lite` → determi
 ## Honest limitations
 
 - **Hourly indicator, not official NAQI.** NAQI is defined on 24-hour averages; Saans applies the same breakpoints to hourly values as an exposure indicator and says so in the UI.
-- **Forecast uncertainty.** CAMS-based forecasts can be biased over Indian cities [CITE — we did not find a Delhi-specific CAMS validation figure]; calibration helps only when a fresh reference reading exists.
+- **Forecast uncertainty.** Saans relies on a global model forecast (CAMS via Open-Meteo); we did not find a published Delhi-specific validation of its hourly PM2.5, so treat hourly values as guidance. Calibration helps only when a fresh reference reading exists.
 - **Stale reference data.** From AWS, data.gov.in refuses connections, and during our build OpenAQ's CPCB feed was ~50 h behind, so the live app is often **uncalibrated** — and labels itself so.
 - **Bedrock was blocked on our account,** so the live demo uses Gemini through the same Strands agent. Bedrock Nova Lite remains supported (`MODEL_PROVIDER=bedrock`).
 - **School thresholds are a design, not a medical guideline.** Swaps are suggestions; the principal decides.
-- Demo schools and timetables are seeded examples.
+- Demo schools and timetables are seeded examples and are **read-only** on the public API (Setup saves a new school instead), so the demo cannot be overwritten.
+- Live calibration is rarely visible right now (data.gov.in blocks AWS; OpenAQ's CPCB feed is stale). The calibration maths is covered by unit tests (`backend/tests/test_calibrate.py`).
 
 ## Run locally
 

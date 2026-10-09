@@ -8,7 +8,7 @@ describe('modeBanner', () => {
     expect(modeBanner({ ...base, mode: 'live' })).toBeNull();
   });
   it('replay: recorded date', () => {
-    expect(modeBanner({ ...base, mode: 'replay', replay_date: '2025-11-19' })).toEqual({ kind: 'replay', text: 'Replay: recorded data from 2025-11-19' });
+    expect(modeBanner({ ...base, mode: 'replay', replay_date: '2025-11-19' })).toEqual({ kind: 'replay', text: 'Replay: recorded Delhi air from 2025-11-19' });
   });
   it('fixture (Open-Meteo down): says sample, not today', () => {
     const b = modeBanner({ ...base, mode: 'fixture' });

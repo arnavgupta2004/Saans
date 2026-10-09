@@ -57,6 +57,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (attempt timeout) | Claude | 148 passed | — |
 | Fri 9 Oct 2026 (replay tool dates) | Claude | 151 passed | — |
 | Sat 10 Oct 2026 (null hours / no-data) | Claude | 155 passed | — |
+| Sat 10 Oct 2026 (QA pass) | Claude | 167 passed | passed (+ vitest 10) |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -138,6 +139,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-10 — Final screenshots (Claude, ~01:50 IST) of the live Amplify site in docs/img/ (today-live, today-replay, today-hi, week, notice-en, notice-hi, ask-waiting, ask-answer, setup). ask-answer still shows "replay_date" wording until the prompt fix (69fca23) is deployed — re-run `npm run shots` in frontend/ after deploy.
 - 2026-10-10 — After prompt deploy (Claude): Ask answer no longer leaks field names. Follow-ups: UI strips single * (markdown italics); prompt explains swap optional=false (suggested move) vs optional=true (better slot) — model had called a required swap "Optional". Prompt change deployed by human; verified ~02:10 IST: answer says "Suggested move: Swap this period with Period 8 (13:40–14:20) … 127 (Moderate)", no asterisks, verified, gemini-3.5-flash-lite. docs/img final.
 - 2026-10-10 — Docs (Claude): two claims left as [CITE] — "children breathe faster" (in WHO press material, not on the report page) and a Delhi-specific CAMS bias figure (none found). Humans: verify or remove before submitting.
+- 2026-10-10 — Judge/QA pass (Claude, ~02:30 IST). Scores: Idea 8, AWS 7, Design 7, Execution 6, Video 6 (unrecorded). Fixed: (1) POST /api/schools returned 200 for demo ids → Setup "Save" overwrote the demo school for everyone; demo ids now 403, Setup saves as `custom-<slug>`. (2) `_in_period` counted the end hour for periods ending on the hour (09:20–10:00 used 10:00 air) → wrong period AQI + missed swaps (Dwarka 9B PE Severe, no swap). (3) best-day `band` came from whole-day PM2.5 only → "AQI 148 · Poor"; now band_for_aqi(max_aqi). (4) Lambda in-memory Open-Meteo cache set mode "cached" → false "prepared by the daily job" banner; now mode live (cached reserved for daily-job plans). (5) Replay banner says "recorded Delhi air". (6) README [CITE]s removed/reworded; "What runs on AWS" section. Also: tests wrote to committed data/schools.json — conftest now uses a temp copy (SCHOOLS_PATH). Open: live calibration rarely visible; LLM not on Bedrock; video not recorded.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
