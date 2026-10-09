@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Any, Callable
 
 from .forecast import load_forecast
@@ -159,7 +160,17 @@ def ask(school_id: str, question: str, lang: str = "en", replay: str | None = No
     makes us return the deterministic answer instead."""
     sink: list[Any] = []
     context = f"[school_id={school_id}] [lang={lang}]" + (f" [context: recorded replay day '{replay}', not today]" if replay else "")
-    answer, used = _run_agent(make_tools(replay, sink), f"{context} {question}")
+    # API Gateway cuts requests at 30 s; give the model a budget and fall back to the plan summary if it is slow.
+    budget = float(os.getenv("AGENT_TIMEOUT_S", "20"))
+    pool = ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(_run_agent, make_tools(replay, sink), f"{context} {question}")
+    try:
+        answer, used = future.result(timeout=budget)
+    except FutureTimeout:
+        logger.warning("Agent timed out after %.1fs for school %s; returning deterministic answer", budget, school_id)
+        return {**deterministic_answer(school_id, lang, replay), "timed_out": True}
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
     evidence = [json.dumps(x, default=str, ensure_ascii=False) for x in sink] + [question, json.dumps(_school(school_id).model_dump())]
     bad = unverified_numbers(answer, evidence)
     if bad:

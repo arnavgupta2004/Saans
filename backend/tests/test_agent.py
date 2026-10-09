@@ -111,3 +111,15 @@ def test_deterministic_answer_hindi() -> None:
 def test_system_prompt_wording() -> None:
     p = agent.SYSTEM_PROMPT
     assert "Open-Meteo" in p and "station forecast" in p and "calibrated" in p
+
+
+def test_slow_agent_times_out_to_deterministic_answer(monkeypatch, caplog) -> None:
+    import time
+    monkeypatch.setenv("AGENT_TIMEOUT_S", "0.3")
+    monkeypatch.setattr(agent, "_run_agent", lambda tools, prompt: (time.sleep(2), ("late", []))[1])
+    t0 = time.monotonic()
+    with caplog.at_level("WARNING"):
+        r = agent.ask(SID, "Is PE safe?", "en", replay="delhi-nov")
+    assert time.monotonic() - t0 < 1.5
+    assert r["fallback"] is True and r["verified"] is False and r.get("timed_out") is True and "351" in r["answer"]
+    assert any("timed out" in m for m in caplog.messages)
