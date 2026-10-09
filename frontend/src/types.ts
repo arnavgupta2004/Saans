@@ -51,6 +51,9 @@ export interface Swap {
   gain_bands: number;
   /** true = period is only 'caution'; a cleaner slot exists but the swap is a suggestion, not a safety action */
   optional?: boolean;
+  /** the indoor class period this outdoor period exchanges slots with */
+  with_period_id?: string | null;
+  with_label?: string | null;
 }
 
 export interface PeriodPlan {

@@ -1,7 +1,7 @@
 from saans.models import Period,School
 from saans.planner import best_day,plan_day
 def school():
- return School(id="x",name="X",city="Delhi",lat=0,lon=0,sensitive_count=1,timetable=[Period(id="pe",label="PE",start="08:40",end="09:20",type="pe",intensity="high",outdoor=True,swappable=False),Period(id="slot",label="Class",start="13:00",end="13:40",type="class",intensity="low",outdoor=False,swappable=True)])
+ return School(id="x",name="X",city="Delhi",lat=0,lon=0,sensitive_count=1,timetable=[Period(id="pe",label="PE",start="08:40",end="09:20",type="pe",intensity="high",outdoor=True,swappable=True),Period(id="slot",label="Class",start="13:00",end="13:40",type="class",intensity="low",outdoor=False,swappable=True)])
 def rows():
  return [{"time":"2026-10-09T08:00","pm25":200,"pm10":100,"pm25_cal":200,"pm10_cal":100,"calibrated":True,"source":"fixture"},{"time":"2026-10-09T09:00","pm25":200,"pm10":100,"pm25_cal":200,"pm10_cal":100,"calibrated":True,"source":"fixture"},{"time":"2026-10-09T13:00","pm25":20,"pm10":20,"pm25_cal":20,"pm10_cal":20,"calibrated":True,"source":"fixture"}]
 def test_period_max_and_clean_swap(): 
@@ -72,3 +72,49 @@ def test_indoors_swap_is_not_optional():
 
 def test_go_period_never_gets_a_swap():
  assert plan_day(_school2(),[_hr(9,20),_hr(13,5)],"2026-10-09").periods[0].swap is None
+
+
+# --- Swap = exchange with an indoor swappable class (PLAN §3.3) ---
+def _replay_plan():
+ from saans.sources import load_replay
+ from saans.store import SEED_SCHOOLS
+ rows,day=load_replay("delhi-nov")
+ return plan_day(SEED_SCHOOLS[0],rows,day,replay_date=day)
+
+def test_replay_non_swappable_outdoor_periods_never_swap():
+ p=_replay_plan()
+ for pp in p.periods:
+  if pp.period.type in ("assembly","recess"): assert pp.swap is None and pp.action.level in ("indoors","caution","go")
+
+def test_replay_pe_exchanges_with_indoor_period_8():
+ p=_replay_plan(); pe=next(x for x in p.periods if x.period.label=="Class 7B PE")
+ assert pe.aqi==351 and pe.swap and not pe.swap.optional
+ assert pe.swap.with_label=="Period 8" and pe.swap.to_start=="13:40" and 120<=pe.swap.to_aqi<=135
+
+def test_replay_swap_targets_unique_and_indoor():
+ p=_replay_plan(); by_id={x.period.id:x.period for x in p.periods}
+ targets=[x.swap.with_period_id for x in p.periods if x.swap]
+ assert targets and len(targets)==len(set(targets))
+ assert all(not by_id[t].outdoor and by_id[t].swappable and by_id[t].type=="class" for t in targets)
+
+def test_never_swap_into_outdoor_slot():
+ t=lambda i,s,e,typ,inten,out,sw:Period(id=i,label=i,start=s,end=e,type=typ,intensity=inten,outdoor=out,swappable=sw)
+ s=School(id="z",name="Z",city="D",lat=0,lon=0,timetable=[t("pe1","08:40","09:20","pe","high",True,True),t("pe2","13:00","13:40","pe","high",True,True)])
+ assert plan_day(s,[_hr(8,200),_hr(9,200),_hr(13,5)],"2026-10-09").periods[0].swap is None
+
+def test_non_swappable_outdoor_pe_never_moves():
+ s=_school2(); s.timetable[0].swappable=False
+ assert plan_day(s,[_hr(9,200),_hr(13,20)],"2026-10-09").periods[0].swap is None
+
+def test_each_target_used_once_worst_first():
+ t=lambda i,s,e,typ,inten,out,sw:Period(id=i,label=i,start=s,end=e,type=typ,intensity=inten,outdoor=out,swappable=sw)
+ s=School(id="z",name="Z",city="D",lat=0,lon=0,timetable=[t("peA","08:00","08:40","pe","high",True,True),t("peB","09:00","09:40","pe","high",True,True),t("c1","12:00","12:40","class","low",False,True),t("c2","13:00","13:40","class","low",False,True)])
+ p=plan_day(s,[_hr(8,250),_hr(9,200),_hr(12,40),_hr(13,20)],"2026-10-09")
+ a,b=p.periods[0],p.periods[1]
+ assert a.swap.with_period_id=="c2" and b.swap.with_period_id=="c1"  # worst (peA) gets the cleanest slot
+
+def test_optional_swap_follows_same_rules():
+ t=lambda i,s,e,typ,inten,out,sw:Period(id=i,label=i,start=s,end=e,type=typ,intensity=inten,outdoor=out,swappable=sw)
+ s=School(id="z",name="Z",city="D",lat=0,lon=0,timetable=[t("pe","09:00","09:40","pe","high",True,True),t("out","13:00","13:40","sports","high",True,True),t("c","14:00","14:40","class","low",False,True)])
+ p=plan_day(s,[_hr(9,80),_hr(13,5),_hr(14,20)],"2026-10-09").periods[0]
+ assert p.swap.optional and p.swap.with_period_id=="c"

@@ -26,34 +26,33 @@ def _today_ist()->datetime: return datetime.now(IST)
 def _pick_now(hours:list[HourPoint], now:datetime)->HourPoint|None:
  """The hour point for the current IST hour-of-day (same hour on a replayed date)."""
  return next((h for h in hours if _hour(h.time)==now.hour),None) or (min(hours,key=lambda h:abs(_hour(h.time)-now.hour)) if hours else None)
-def _swap_for(period:Period, band:str, candidates:list[Period], rows:list[dict[str,Any]], accept:tuple[str,...]=("go","caution"), optional:bool=False)->Swap|None:
- """Cleanest same-day swappable slot whose action level for this activity is in `accept`."""
- choices=[]
- for target in candidates:
-  if target.id==period.id: continue
-  target_aqi,target_band=_period_aqi(rows,target)
-  if not _points(rows,target): continue
-  if action_for(period.type,period.intensity,target_band).level in accept:
-   choices.append((target_aqi,target.start,target,target_band))
- if not choices: return None
- target_aqi,_,target,target_band=min(choices,key=lambda x:(x[0],x[1]))
- return Swap(to_start=target.start,to_end=target.end,to_aqi=target_aqi,to_band=target_band,gain_bands=_RANK[band]-_RANK[target_band],optional=optional)
+def _assign_swaps(plans:list[PeriodPlan], targets:list[Period], rows:list[dict[str,Any]])->None:
+ """Swap = exchange a swappable outdoor period with an indoor swappable class period (08:00-15:00) the same day.
+ Greedy: worst period first takes the lowest-AQI free target that improves its action level; each target used once.
+ indoors -> target must give go/caution; caution -> target must give go (optional swap)."""
+ slots=[(t,*_period_aqi(rows,t)) for t in targets if _points(rows,t)]
+ used:set[str]=set()
+ movers=[p for p in plans if p.period.outdoor and p.period.swappable and p.action.level in ("indoors","caution")]
+ for pp in sorted(movers,key=lambda p:(-p.aqi,p.action.level!="indoors",p.period.start)):
+  accept=("go","caution") if pp.action.level=="indoors" else ("go",)
+  free=[(aqi,t.start,t,band) for t,aqi,band in slots if t.id not in used and t.id!=pp.period.id and action_for(pp.period.type,pp.period.intensity,band).level in accept]
+  if not free: continue
+  aqi,_,t,band=min(free,key=lambda x:(x[0],x[1])); used.add(t.id)
+  pp.swap=Swap(to_start=t.start,to_end=t.end,to_aqi=aqi,to_band=band,gain_bands=_RANK[pp.band]-_RANK[band],optional=pp.action.level=="caution",with_period_id=t.id,with_label=t.label)
 def plan_day(school:School,hourly_cal:list[dict[str,Any]], date:str|Date, sources:dict[str,Any]|None=None, mode:str|None=None, now:datetime|None=None, replay_date:str|None=None)->DayPlan:
  day=str(date); rows=[p for p in hourly_cal if p["time"].startswith(day)]
  hours=[_point(p) for p in rows]
  window=[h for h in hours if 7<=_hour(h.time)<=16] or hours
  worst=max(window,key=lambda x:x.aqi); best=min(window,key=lambda x:x.aqi)
- candidates=[p for p in school.timetable if p.swappable and 8<=_hour(p.start)<15]
+ targets=[p for p in school.timetable if p.swappable and not p.outdoor and p.type=="class" and 8<=_hour(p.start)<15]
  plans=[]
  for period in school.timetable:
   aqi,band=_period_aqi(rows,period)
   if not period.outdoor:
    plans.append(PeriodPlan(period=period,aqi=aqi,band=band,action=INDOOR_ACTION,sensitive_action=INDOOR_ACTION)); continue
   action=action_for(period.type,period.intensity,band)
-  swap=None
-  if action.level=="indoors": swap=_swap_for(period,band,candidates,rows)
-  elif action.level=="caution": swap=_swap_for(period,band,candidates,rows,("go",),optional=True)  # "Better slot available"
-  plans.append(PeriodPlan(period=period,aqi=aqi,band=band,action=action,sensitive_action=action_for(period.type,period.intensity,band,True),swap=swap))
+  plans.append(PeriodPlan(period=period,aqi=aqi,band=band,action=action,sensitive_action=action_for(period.type,period.intensity,band,True)))
+ _assign_swaps(plans,targets,rows)
  source=sources or {}
  forecast=source.get("forecast","open-meteo")
  actual_mode=mode or (forecast if forecast in ("live","cached","fixture","replay") else ("fixture" if any(p.get("source")=="fixture" for p in rows) else "live"))

@@ -4,6 +4,10 @@ import { DayPlan, PeriodPlan } from './types';
 import { getBandColor, getActionColor } from './utils/colors';
 import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
 
+/** e.g. "Class 7B PE 08:40 ⇄ Period 8 13:40 · AQI 351 → 127" */
+const swapText = (p: PeriodPlan) =>
+  `${p.period.label} ${p.period.start} ⇄ ${p.swap?.with_label ?? 'slot'} ${p.swap?.to_start} · AQI ${p.aqi} → ${p.swap?.to_aqi}`;
+
 export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,7 +145,7 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
             {p.swap && (p.swap.optional ? (
               <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
                 <p className="text-xs text-slate-600">
-                  <span className="font-semibold">Better slot available:</span> {p.swap.to_start} (AQI {p.swap.to_aqi}, {p.swap.to_band})
+                  <span className="font-semibold">Better slot available:</span> {swapText(p)}
                 </p>
                 <button className="text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-100 py-1 px-2.5 rounded-md shrink-0">
                   Optional swap
@@ -154,10 +158,7 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
                     <ArrowRightLeft className="w-4 h-4 text-blue-700" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">
-                      Swap to {p.swap.to_start}
-                      <span className="text-blue-700 font-normal ml-1">(AQI drops to {p.swap.to_aqi})</span>
-                    </p>
+                    <p className="text-sm font-semibold text-blue-900">{swapText(p)}</p>
                     <button className="mt-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 py-1.5 px-3 rounded-md transition-colors shadow-sm">
                       Apply Swap
                     </button>

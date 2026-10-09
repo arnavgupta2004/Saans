@@ -82,7 +82,7 @@ Based on CPCB health-advisory categories; the thresholds for school actions are 
 
 Only **outdoor** periods get protocol actions (indoor periods are `go` / "Indoor class — no change needed", rule `SAANS-INDOOR`).
 
-Swap rule: for an outdoor period whose action is `indoors`, suggest a swap when a swappable slot the same day (start 08:00–15:00; indoor class periods are valid targets) would give level `go` or `caution` for the same activity. Pick the lowest-AQI such slot; `gain_bands` = band difference. (`planner.py`; supersedes the earlier "2+ bands better" rule.) Additionally, if the action is `caution` and a same-day swappable slot would give `go`, the swap is added with `optional=true` ("Better slot available"; shown as a softer suggestion).
+Swap rule (exchange): only outdoor periods with `swappable=true` can be moved; non-swappable outdoor periods (assembly, recess) only get their rules.py action. A swap is an EXCHANGE with an **indoor, swappable class period** (`outdoor=false`) the same day, starting 08:00–15:00, whose hours give the activity a better action level — never another outdoor period. `indoors` → target must give `go`/`caution`; `caution` → target must give `go` (`optional=true`, "Better slot available"). Each target is used at most once per day: assign greedily, worst period (highest AQI) first, to the lowest-AQI free target. `gain_bands` = band difference; Swap carries `with_period_id` and `with_label`.
 
 ### 3.4 Best day finder
 For an activity with a duration and preferred hours (e.g., Sports Day 09:00–12:00), score each of the next 5 days by **max calibrated hourly AQI** in that window (lower is better), tie-break by mean. Return ranking + reason.
