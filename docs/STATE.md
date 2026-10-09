@@ -55,7 +55,7 @@
 | T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Ranking comes from `getBestDay` (planner.best_day); frontend only displays. Mock until T10. |
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
-| T18 | /api/ask + polished notice | Cursor | T17 | IN PROGRESS (Claude) | /api/ask wired to agent with deterministic fallback; `polish=true` still 501 (needs number-check vs plan). |
+| T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
 | T19 | Daily EventBridge job | Cursor | T12 | TODO | |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | TODO | cut #1 if late |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |

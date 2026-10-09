@@ -7,7 +7,7 @@ import mockNoticeEn from './mock/notice_en.json';
 import mockNoticeHi from './mock/notice_hi.json';
 
 const USE_MOCK = false;
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = `${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')}/api`;
 
 export const getDayPlan = async (schoolId: string, replayDate?: string): Promise<DayPlan> => {
   if (USE_MOCK) {
