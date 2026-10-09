@@ -58,3 +58,87 @@ def test_live_response_is_parsed_and_cached() -> None:
     body = {"records": [_row("Vivek Vihar, Delhi - DPCC", "28.6720", "77.3150", "PM2.5", "118")]}
     c = CpcbClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body))))
     assert c.latest_near(28.647, 77.316)["source"] == "live" and c.latest_near(28.647, 77.316)["source"] == "cached"
+
+
+def _aq(value, la, lo, local="2026-10-09T18:30:00+05:30", loc=1):
+    return {"value": value, "coordinates": {"latitude": la, "longitude": lo}, "datetime": {"utc": "2026-10-09T13:00:00Z", "local": local}, "locationsId": loc, "sensorsId": loc * 10}
+
+
+def test_openaq_picks_nearest_fresh_sensor_within_25km() -> None:
+    from datetime import datetime
+    from saans.sources import IST, parse_openaq_results
+    now = datetime(2026, 10, 9, 19, 0, tzinfo=IST)
+    results = [_aq(80, 28.80, 77.316, loc=1),            # ~17 km
+               _aq(60, 28.66, 77.316, loc=2),            # ~1.5 km, nearest
+               _aq(55, 28.65, 77.316, local="2026-10-09T10:00:00+05:30", loc=3),  # nearest but stale
+               _aq(-1, 28.647, 77.316, loc=4),           # invalid
+               _aq(70, 29.50, 77.316, loc=5)]            # >25 km
+    r = parse_openaq_results(results, 28.647, 77.316, now)
+    assert r["station"].endswith("2") and r["pm25"] == 60 and r["distance_km"] < 3 and r["provider"] == "openaq" and r["source"] == "live"
+    assert r["observed_at"] == "2026-10-09 18:30:00"
+
+
+def test_openaq_raises_with_reason_when_none_usable() -> None:
+    import pytest
+    from datetime import datetime
+    from saans.sources import IST, parse_openaq_results
+    with pytest.raises(RuntimeError, match="no fresh PM2.5"):
+        parse_openaq_results([_aq(60, 40.0, 70.0)], 28.647, 77.316, datetime(2026, 10, 9, 19, 0, tzinfo=IST))
+
+
+def test_openaq_client_requires_key_and_sends_header(monkeypatch) -> None:
+    import pytest
+    monkeypatch.delenv("OPENAQ_API_KEY", raising=False)
+    _Cache.values.clear()
+    from saans.sources import OpenAqClient
+    with pytest.raises(RuntimeError, match="OPENAQ_API_KEY"):
+        OpenAqClient(api_key=None).latest_near(1, 2)
+    seen = {}
+    def handler(req):
+        seen["key"] = req.headers.get("x-api-key"); seen["q"] = dict(req.url.params)
+        from datetime import datetime
+        from saans.sources import IST
+        return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat())]})
+    r = OpenAqClient(api_key="abc", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
+    assert seen["key"] == "abc" and seen["q"]["radius"] == "25000" and r["pm25"] == 60
+
+
+def _patch_chain(monkeypatch, cpcb, openaq):
+    import saans.forecast as fc
+    monkeypatch.setattr(fc.OpenMeteoClient, "hourly", lambda self, la, lo, days=5: [{"time": "2026-10-09T09:00", "pm25": 50, "pm10": 60, "source": "live"}])
+    def run(client_result):
+        def f(self, la, lo):
+            if isinstance(client_result, Exception): raise client_result
+            return client_result
+        return f
+    monkeypatch.setattr(fc.CpcbClient, "latest_near", run(cpcb)); monkeypatch.setattr(fc.OpenAqClient, "latest_near", run(openaq))
+    return fc
+
+
+def _school():
+    from saans.store import SEED_SCHOOLS
+    return SEED_SCHOOLS[0]
+
+
+_LIVE_CPCB = {"station": "S", "distance_km": 2, "pm25": 100, "source": "live", "provider": "cpcb"}
+_LIVE_AQ = {"station": "OpenAQ location 9", "distance_km": 3, "pm25": 75, "source": "live", "provider": "openaq"}
+
+
+def test_chain_prefers_cpcb_then_openaq_then_uncalibrated(monkeypatch) -> None:
+    from datetime import datetime
+    import saans.calibrate as cal
+    monkeypatch.setattr(cal, "datetime", type("D", (datetime,), {"now": classmethod(lambda cls, tz=None: datetime(2026, 10, 9, 9, 30, tzinfo=cal.IST))}))
+    fc = _patch_chain(monkeypatch, _LIVE_CPCB, _LIVE_AQ)
+    rows, src, mode = fc.load_forecast(_school())
+    assert src["observation"] == "live:cpcb" and rows[0]["calibrated"] is True
+    fc = _patch_chain(monkeypatch, RuntimeError("down"), _LIVE_AQ)
+    rows, src, _ = fc.load_forecast(_school())
+    assert src["observation"] == "live:openaq" and src["station"] == "OpenAQ location 9" and rows[0]["calibrated"] is True
+    fc = _patch_chain(monkeypatch, {**_LIVE_CPCB, "distance_km": 60}, _LIVE_AQ)  # CPCB too far -> OpenAQ
+    assert fc.load_forecast(_school())[1]["observation"] == "live:openaq"
+    fc = _patch_chain(monkeypatch, {**_LIVE_CPCB, "source": "fixture"}, RuntimeError("no key"))
+    rows, src, mode = fc.load_forecast(_school())
+    assert src["observation"] == "fixture:cpcb" and rows[0]["calibrated"] is False and mode == "live"
+    fc = _patch_chain(monkeypatch, RuntimeError("down"), RuntimeError("no key"))
+    rows, src, _ = fc.load_forecast(_school())
+    assert src["observation"] == "none" and rows[0]["calibrated"] is False

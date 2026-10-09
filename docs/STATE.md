@@ -94,6 +94,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Replay (Claude): `replay` query param is now a recording key (`delhi-nov`), not a date; unknown key → 404. Replay uses sources.forecast="recorded", observation "none", uncalibrated; `now` = 08:00 reading. Footer no longer claims "calibrated" unless `now.calibrated`.
 - 2026-10-09 — Optional swap (Claude): `Swap.optional` (default false). `caution` outdoor period + same-day swappable slot giving `go` → swap with optional=true; frontend renders it as "Better slot available". PLAN §3.3 updated.
 - 2026-10-09 — Incident (Claude): commit 6fddeeb accidentally included `backend/.aws-sam/` build output (5.5k library files, no secrets). Untracked in the next commit and added to .gitignore; history not rewritten (AGENTS.md §7). Always `git add` explicit paths.
+- 2026-10-09 — Calibration source chain (Claude): data.gov.in CPCB → OpenAQ v3 (`OPENAQ_API_KEY`, NoEcho SAM param `OpenAqApiKey`; `GET /v3/parameters/2/latest?coordinates&radius=25000`, nearest fresh PM2.5 sensor, header X-API-Key) → uncalibrated. `sources.observation` = `<source>:<provider>` e.g. `live:openaq`, `fixture:cpcb`, `none`. OpenAQ parser UNVERIFIED against a real response (no key/network in agent sandbox); parser is defensive and logs reasons via logger.warning.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

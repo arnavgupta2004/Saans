@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import json, logging, math, os, time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
+IST = ZoneInfo("Asia/Kolkata")
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 OPEN_METEO_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 CPCB_RESOURCE_ID = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69"
@@ -111,3 +114,41 @@ def load_replay(key: str) -> tuple[list[dict[str, Any]], str]:
     """Recorded real bad-air day. Returns (hourly rows labelled source='replay', recorded date). KeyError if unknown."""
     data = _load(REPLAYS[key]); h = data["hourly"]
     return [{"time": t, "pm25": a, "pm10": b, "source": "replay"} for t, a, b in zip(h["time"], h["pm2_5"], h["pm10"])], data["date"]
+
+
+OPENAQ_URL = "https://api.openaq.org/v3/parameters/2/latest"  # parameter 2 = PM2.5
+OPENAQ_RADIUS_M = 25000
+OPENAQ_MAX_AGE_S = 2 * 3600
+
+class OpenAqClient:
+    """Nearest OpenAQ v3 PM2.5 sensor within 25 km of the school, latest value (free API key)."""
+    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None):
+        self.api_key, self.client = api_key or os.getenv("OPENAQ_API_KEY"), client or httpx.Client(timeout=15)
+    def latest_near(self, lat: float, lon: float) -> dict[str, Any]:
+        key = f"openaq:{lat}:{lon}"; cached = _Cache.get(key)
+        if cached: return {**cached, "source": "cached", "age_s": round(_Cache.age(key))}
+        if not self.api_key: raise RuntimeError("OPENAQ_API_KEY missing")
+        response = self.client.get(OPENAQ_URL, headers={"X-API-Key": self.api_key}, params={"coordinates": f"{lat},{lon}", "radius": OPENAQ_RADIUS_M, "limit": 1000})
+        response.raise_for_status()
+        results = response.json().get("results")
+        if not isinstance(results, list): raise RuntimeError("OpenAQ: unexpected response shape (no 'results' list)")
+        return _Cache.put(key, parse_openaq_results(results, lat, lon))
+
+def parse_openaq_results(results: list[dict[str, Any]], lat: float, lon: float, now: datetime | None = None) -> dict[str, Any]:
+    """Pick the nearest fresh sensor reading (<2h old, ≤25 km, numeric non-negative value)."""
+    now = now or datetime.now(IST); best: tuple[float, dict[str, Any], datetime] | None = None
+    for row in results:
+        value = _num(row.get("value")); coords = row.get("coordinates") or {}
+        la, lo = _num(coords.get("latitude")), _num(coords.get("longitude"))
+        stamp = (row.get("datetime") or {}).get("local") or (row.get("datetime") or {}).get("utc")
+        if value is None or value < 0 or la is None or lo is None or not stamp: continue
+        try: observed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        except ValueError: continue
+        if observed.tzinfo is None: observed = observed.replace(tzinfo=IST)
+        distance = _distance(lat, lon, la, lo)
+        if distance > OPENAQ_RADIUS_M / 1000 or (now - observed).total_seconds() >= OPENAQ_MAX_AGE_S: continue
+        if best is None or distance < best[0]: best = (distance, row, observed)
+    if best is None: raise RuntimeError(f"OpenAQ: no fresh PM2.5 sensor within 25 km in {len(results)} results")
+    distance, row, observed = best
+    return {"station": f"OpenAQ location {row.get('locationsId', row.get('sensorsId', '?'))}", "distance_km": round(distance, 2), "pm25": _num(row["value"]), "pm10": None,
+            "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq"}

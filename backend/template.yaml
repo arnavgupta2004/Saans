@@ -18,6 +18,10 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ''
+  OpenAqApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
 
 Resources:
   SchoolsTable:
@@ -62,6 +66,7 @@ Resources:
           BEDROCK_MODEL_ID: !Ref BedrockModelId
           MODEL_PROVIDER: !Ref ModelProvider
           GEMINI_API_KEY: !Ref GeminiApiKey
+          OPENAQ_API_KEY: !Ref OpenAqApiKey
           DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
           CACHE_TABLE: !Ref CacheTable
       Policies:
