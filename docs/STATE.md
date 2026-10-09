@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 18:35 IST (T10 in progress)
+**Last updated:** Claude — Fri 9 Oct 2026, 19:00 IST (T10, T11 done)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,10 +12,10 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T10 — FastAPI endpoints
-- **Where:** `backend/app.py`
-- **Done so far:** T09 planner completed with deterministic period AQI, swaps, weekly and best-day planning.
-- **Next concrete step:** expose §6 endpoints with CORS and connect them to stores/planner.
+- **Task:** T08 leftovers check / T12 SAM deploy skeleton (needs human AWS keys, T02) or T17 agent.py
+- **Where:** `backend/template.yaml` (not yet created) / `backend/saans/agent.py` (empty)
+- **Done so far:** T09, T10, T11 done; backend 56 tests passing.
+- **Next concrete step:** T17 Strands agent tools wrapping planner/best_day/build_notice (no AWS needed for tool tests); then T12 once keys exist.
 - **Commands:** `cd backend && .venv/bin/python -m pytest -q`
 
 ---
@@ -30,6 +30,7 @@
 | Fri 9 Oct 2026, 16:51 IST | Codex | 41 passed | passed |
 | Fri 9 Oct 2026, 17:45 IST | Antigravity | not run | passed |
 | Fri 9 Oct 2026, 17:55 IST | Antigravity | not run | passed |
+| Fri 9 Oct 2026, 19:00 IST | Claude | 56 passed | not run |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -46,8 +47,8 @@
 | T07 | rules.py + tests | Cursor | T04 | DONE | Deterministic activity/sensitive-student protocol actions with simple Hindi text; every table cell tested. Tests: 41 passed; frontend build passed. |
 | T08 | models.py + store.py + seed schools | Cursor | T03 | TODO | |
 | T09 | planner.py + tests | Cursor | T06, T07, T08 | DONE | Planner rules tested (51 passed). Fixture E2E table: `PE | 362 | Very Poor | indoors | 13:00–13:40 (AQI 33, Good)`. |
-| T10 | app.py endpoints | Cursor | T09 | IN PROGRESS (Codex, 18:35 IST) | |
-| T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | TODO | |
+| T10 | app.py endpoints | Cursor | T09 | DONE | §6 endpoints + CORS + Mangum; /api/ask is a stub until T18; notice polish returns 501. |
+| T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | DONE | Deterministic EN/HI, mode label, wa.me URL; 3 tests. |
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |
 | T14 | Frontend onboarding | Antigravity | T10 | IN PROGRESS (Cursor, 18:05 IST) | Reduced scope: city presets + geolocation, no map. |
