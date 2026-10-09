@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 16:42 IST (T03 complete; T04 next)
+**Last updated:** Codex — Fri 9 Oct 2026, 16:47 IST (T04 complete; T07 next)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,10 +12,10 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T04 — NAQI calculations
-- **Where:** `backend/saans/aqi.py`
-- **Done so far:** T03 scaffolded FastAPI/Mangum backend, a health endpoint test, Vite React TypeScript Tailwind frontend, and a local backend virtual environment.
-- **Next concrete step:** implement CPCB PM2.5/PM10 breakpoint interpolation and its boundary tests.
+- **Task:** T07 — Deterministic school safety rules
+- **Where:** `backend/saans/rules.py`
+- **Done so far:** T04 implements CPCB PM2.5/PM10 breakpoints, capped sub-index interpolation, NAQI bands and metadata, plus boundary/invalid-input tests.
+- **Next concrete step:** implement the §3.3 action table for high/low outdoor activities and sensitive students.
 - **Commands:** `cd backend && .venv/bin/python -m pytest -q`; `cd frontend && npm run build`
 
 ---
@@ -26,6 +26,7 @@
 | — | — | not run | not run |
 | Fri 9 Oct 2026, 16:35 IST | Codex | unavailable — `backend/` absent | unavailable — `frontend/` absent |
 | Fri 9 Oct 2026, 16:42 IST | Codex | 1 passed | passed |
+| Fri 9 Oct 2026, 16:47 IST | Codex | 20 passed | passed |
 
 ---
 
@@ -35,7 +36,7 @@
 | T01 | Builder Center verification, Avishi joins | Human | — | TODO | |
 | T02 | Keys: data.gov.in, AWS CLI/SAM, Bedrock Nova Lite access, $5 budget | Human | — | TODO | |
 | T03 | Scaffold repo | Any | — | DONE | FastAPI/Mangum health endpoint + test; Vite React TypeScript Tailwind placeholder; local `.venv` created. Tests: 1 passed; frontend build passed. |
-| T04 | aqi.py + tests | Cursor | T03 | TODO | |
+| T04 | aqi.py + tests | Cursor | T03 | DONE | CPCB PM2.5/PM10 NAQI interpolation, metadata, caps, and invalid-input handling. Tests: 20 passed; frontend build passed. |
 | T05 | sources.py + fixtures + tests | Cursor | T03 | TODO | needs data.gov.in key for live recording |
 | T06 | calibrate.py + tests | Cursor | T04, T05 | TODO | |
 | T07 | rules.py + tests | Cursor | T04 | TODO | |
@@ -75,3 +76,4 @@
 |---|---|---|
 | Fri 16:00 | Claude → humans | Kit created. Start with T01–T03. |
 | Fri 16:42 | Codex → Codex | T03 complete. Begin T04 in `backend/saans/aqi.py`. |
+| Fri 16:47 | Codex → Codex | T04 complete. Begin T07 in `backend/saans/rules.py`. |
