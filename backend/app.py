@@ -20,7 +20,9 @@ from saans.store import SchoolStore, get_plan_cache, get_store
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Saans", version="0.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://localhost:8000"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+# Public, cookie-less API: any origin (Amplify, localhost). API Gateway forwards OPTIONS preflights to this app,
+# so a restrictive list here made browsers fail POST /api/ask from the hosted site (preflight 400).
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
 
 def _store() -> SchoolStore:

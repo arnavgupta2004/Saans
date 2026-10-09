@@ -98,3 +98,10 @@ def test_ask_agent_failure_returns_deterministic_plan(monkeypatch) -> None:
     monkeypatch.setattr(agent, "ask", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("404 model gone")))
     r = TestClient(api.app).post("/api/ask", json={"school_id": "delhi-anand-vihar", "question": "x", "replay": "delhi-nov"}).json()
     assert r["verified"] is False and r["fallback"] is True and "351" in r["answer"]
+
+
+def test_cors_preflight_from_amplify_origin() -> None:
+    r = TestClient(api.app).options("/api/ask", headers={
+        "Origin": "https://main.d6f34l6r9rpi9.amplifyapp.com",
+        "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"})
+    assert r.status_code == 200 and r.headers["access-control-allow-origin"] in ("*", "https://main.d6f34l6r9rpi9.amplifyapp.com")
