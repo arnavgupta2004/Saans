@@ -117,11 +117,11 @@ def get_best_day(school_id: str, start: str = Query("09:00", pattern=r"^([01]\d|
 
 
 @app.get("/api/schools/{school_id}/notice")
-def notice(school_id: str, lang: Literal["en", "hi"] = "en", polish: bool = False) -> dict:
+def notice(school_id: str, lang: Literal["en", "hi"] = "en", polish: bool = False, replay: str | None = None) -> dict:
     if polish:
         raise HTTPException(status_code=501, detail="Notice polishing is not available yet")
     from saans.notices import build_notice
-    return build_notice(_day_plan(_school_or_404(school_id)), lang)
+    return build_notice(_day_plan(_school_or_404(school_id), replay), lang)
 
 
 class AskRequest(BaseModel):

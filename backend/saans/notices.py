@@ -36,16 +36,18 @@ def build_notice(plan: DayPlan, lang: str = "en") -> dict:
         )
         for p in outdoor:
             label = f"{p.period.label} ({p.period.start})"
-            if p.swap:
+            text = p.action.text_hi if hi else p.action.text_en
+            if p.swap and not p.swap.optional:
+                # A swap is a suggestion the school may accept; the notice offers it, it never announces it as done.
                 s = p.swap
                 sb = BAND_HI.get(s.to_band, s.to_band) if hi else s.to_band
-                lines.append(f"• {label}: {s.to_start} पर स्थानांतरित ({sb}, AQI {s.to_aqi})" if hi
-                             else f"• {label}: moved to {s.to_start} ({s.to_band}, AQI {s.to_aqi})")
+                lines.append(f"• {label}: {text.rstrip('।')}, या {s.to_start} पर करें ({sb}, AQI {s.to_aqi})।" if hi
+                             else f"• {label}: {text.rstrip('.')}, or move it to {s.to_start} ({s.to_band}, AQI {s.to_aqi}).")
             else:
-                lines.append(f"• {label}: {p.action.text_hi if hi else p.action.text_en}")
+                lines.append(f"• {label}: {text}")
         if plan.sources and any(p.sensitive_action.level != "go" for p in outdoor):
             a = max(outdoor, key=lambda p: p.aqi).sensitive_action
-            lines.append(f"• {a.text_hi if hi else a.text_en}")
+            lines.append(f"• अस्थमा वाले विद्यार्थी: {a.text_hi}" if hi else f"• Students with asthma: {a.text_en}")
         lines.append("आपके सहयोग के लिए धन्यवाद।" if hi else "Thank you for your cooperation.")
     note = MODE_NOTE["hi" if hi else "en"].get(plan.mode)
     if note:
