@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { getWeekPlan, getBestDay } from './api';
+import { BestDayResponse, WeekPlan } from './types';
 import { getBandColor } from './utils/colors';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar, Search } from 'lucide-react';
 
-export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
-  const [weekData, setWeekData] = useState<any>(null);
+export default function WeekView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
+  const [weekData, setWeekData] = useState<WeekPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [bestDayStart, setBestDayStart] = useState('09:00');
   const [bestDayEnd, setBestDayEnd] = useState('12:00');
-  const [bestDayData, setBestDayData] = useState<any>(null);
+  const [bestDayData, setBestDayData] = useState<BestDayResponse | null>(null);
   const [bestDayLoading, setBestDayLoading] = useState(false);
+  const [bestDayError, setBestDayError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchWeek = async () => {
@@ -29,11 +31,13 @@ export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeScho
 
   const handleFindBestDay = async () => {
     setBestDayLoading(true);
+    setBestDayError(null);
     try {
       const data = await getBestDay(activeSchoolId, bestDayStart, bestDayEnd);
       setBestDayData(data);
     } catch (err) {
       console.error(err);
+      setBestDayError('Could not load best-day ranking');
     } finally {
       setBestDayLoading(false);
     }
@@ -47,7 +51,7 @@ export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeScho
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200">
-      <header className="bg-white px-5 pt-6 pb-5 border-b border-slate-100">
+      <header className="bg-white px-5 pt-14 pb-5 border-b border-slate-100">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Week Overview</h1>
       </header>
 
@@ -55,7 +59,7 @@ export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeScho
         <section>
           <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">5-Day Forecast</h2>
           <div className="flex justify-between space-x-2">
-            {weekData.days.map((day: any) => {
+            {weekData.days.map((day) => {
               const dateObj = new Date(day.date);
               const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
               const dayNum = dateObj.getDate();
@@ -76,7 +80,7 @@ export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeScho
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={weekData.hourly}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="time" tickFormatter={(time) => new Date(time).toLocaleTimeString([], {hour: '2-digit'})} tick={{fontSize: 12, fill: '#64748B'}} />
+                <XAxis dataKey="time" tickFormatter={(time: string) => new Date(time).toLocaleTimeString([], {hour: '2-digit'})} tick={{fontSize: 12, fill: '#64748B'}} />
                 <YAxis tick={{fontSize: 12, fill: '#64748B'}} />
                 <Tooltip labelFormatter={(label) => new Date(String(label)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} />
                 <Legend iconType="circle" wrapperStyle={{fontSize: '12px'}} />
@@ -117,18 +121,19 @@ export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeScho
             {bestDayLoading ? <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span> : <Search className="w-4 h-4" />}
             Find Best Day
           </button>
+          {bestDayError && <p className="text-sm text-red-600 mt-2">{bestDayError}</p>}
 
           {bestDayData && (
             <div className="mt-5 pt-5 border-t border-slate-100">
               <p className="text-sm text-slate-700 font-medium mb-4">{bestDayData.reason}</p>
               <div className="space-y-2">
-                {bestDayData.ranking.map((rank: any, i: number) => (
+                {bestDayData.ranking.map((rank, i) => (
                   <div key={rank.date} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex items-center gap-3">
                       <span className="font-black text-slate-400 w-4">{i + 1}</span>
                       <div>
                         <p className="font-bold text-slate-900">{new Date(rank.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</p>
-                        <p className="text-xs text-slate-500">{rank.band}</p>
+                        <p className="text-xs text-slate-500">{rank.band} · mean {rank.mean_aqi}</p>
                       </div>
                     </div>
                     <div className={`px-2 py-1 rounded-md text-xs font-bold ${getBandColor(rank.band)}`}>

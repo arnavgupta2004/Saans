@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Antigravity — Fri 9 Oct 2026, 17:55 IST (T14 complete)
+**Last updated:** Cursor — Fri 9 Oct 2026, 18:05 IST (best-day ranking from API only)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,11 +12,11 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T08 — models.py + store.py + seed schools (TODO)
-- **Where:** `backend/saans/`
-- **Done so far:** Frontend UI (T13, T14, T15, T16) complete.
-- **Next concrete step:** Implement backend models and store (T08).
-- **Commands:** `cd backend && pytest -q`
+- **Task:** T14 — Frontend onboarding (IN PROGRESS, Cursor)
+- **Where:** `frontend/src/OnboardingView.tsx`, `frontend/src/App.tsx`
+- **Done so far:** Best-day picker calls `getBestDay(schoolId, start, end)` and displays API `ranking` + `reason` only (mock). UI does not sort or derive bands.
+- **Next concrete step:** Finish reduced-scope T14 (city presets, geolocation, timetable editor, asthma count, 3-school switcher).
+- **Commands:** `cd frontend && npm run build`
 
 ---
 
@@ -30,6 +30,7 @@
 | Fri 9 Oct 2026, 16:51 IST | Codex | 41 passed | passed |
 | Fri 9 Oct 2026, 17:45 IST | Antigravity | not run | passed |
 | Fri 9 Oct 2026, 17:55 IST | Antigravity | not run | passed |
+| Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
 
@@ -49,8 +50,8 @@
 | T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | TODO | |
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |
-| T14 | Frontend onboarding | Antigravity | T10 | DONE | Built with city presets and school switcher. |
-| T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Built with Recharts and mock data flag. |
+| T14 | Frontend onboarding | Antigravity | T10 | IN PROGRESS (Cursor, 18:05 IST) | Reduced scope: city presets + geolocation, no map. |
+| T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Ranking comes from `getBestDay` (planner.best_day); frontend only displays. Mock until T10. |
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | TODO | |
 | T18 | /api/ask + polished notice | Cursor | T17 | TODO | |
@@ -75,6 +76,7 @@
 ## Known issues / surprises
 - T05: Open-Meteo live schema and three location forecasts verified. data.gov.in resource `3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69` could not be reached from this environment and no private API key was present, so CPCB uses a clearly labelled documented-shape fixture; live parser remains unverified.
 - Frontend baseline regressed after T05 due to unrelated concurrent files: `src/api.ts` needs Vite `ImportMeta.env` typing and `src/TodayView.tsx` imports missing `lucide-react`. Backend remains green.
+- Cursor session: `pytest` collection fails here without installed backend deps (`mangum`). Frontend `npm run build` passed after `npm install`.
 
 ## Handoff history (append only)
 | Time (IST) | From → To | Summary |
@@ -86,3 +88,4 @@
 | Fri 17:00 | Antigravity → next agent | T13 complete in frontend/ with mock data. Ready for T14 or T15. |
 | Fri 17:45 | Antigravity → next agent | T15 and T16 complete. Bottom tab navigation added. |
 | Fri 17:55 | Antigravity → next agent | T14 complete. Best day fixed to use API purely. |
+| Fri 18:05 | Cursor → Cursor | Best-day ranking typed and displayed from `getBestDay` only (no frontend ranking). T14 reduced-scope next. |

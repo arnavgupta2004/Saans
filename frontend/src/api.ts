@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { DayPlan } from './types';
+import { BestDayResponse, DayPlan, WeekPlan } from './types';
 import mockDayPlan from './mock/dayplan.json';
 import mockWeek from './mock/week.json';
 import mockBestDay from './mock/bestday.json';
@@ -22,20 +22,26 @@ export const getDayPlan = async (schoolId: string, replayDate?: string): Promise
   return response.json();
 };
 
-export const getWeekPlan = async (schoolId: string) => {
+export const getWeekPlan = async (schoolId: string): Promise<WeekPlan> => {
   if (USE_MOCK) {
-    return mockWeek;
+    return mockWeek as WeekPlan;
   }
   const response = await fetch(`${API_URL}/schools/${schoolId}/week`);
   if (!response.ok) throw new Error('Failed to fetch week plan');
   return response.json();
 };
 
-export const getBestDay = async (schoolId: string, start: string, end: string) => {
+/** Ranking comes from planner.best_day. The UI must not sort or derive bands. */
+export const getBestDay = async (
+  schoolId: string,
+  start: string,
+  end: string,
+): Promise<BestDayResponse> => {
   if (USE_MOCK) {
-    return mockBestDay;
+    return mockBestDay as BestDayResponse;
   }
-  const response = await fetch(`${API_URL}/schools/${schoolId}/best-day?start=${start}&end=${end}`);
+  const params = new URLSearchParams({ start, end });
+  const response = await fetch(`${API_URL}/schools/${schoolId}/best-day?${params}`);
   if (!response.ok) throw new Error('Failed to fetch best day');
   return response.json();
 };

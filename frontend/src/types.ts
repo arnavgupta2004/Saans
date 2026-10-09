@@ -78,3 +78,30 @@ export interface DayPlan {
   mode: 'live' | 'cached' | 'fixture' | 'replay';
   generated_at: string;
 }
+
+/** GET /api/schools/{id}/week — planner owns AQI/band fields */
+export interface WeekDaySummary {
+  date: string;
+  worst_aqi: number;
+  worst_band: string;
+  best_hour: string;
+  worst_hour: string;
+}
+
+export interface WeekPlan {
+  days: WeekDaySummary[];
+  hourly: HourPoint[];
+}
+
+/** GET /api/schools/{id}/best-day — ranking is produced by planner.best_day */
+export interface BestDayRank {
+  date: string;
+  max_aqi: number;
+  mean_aqi: number;
+  band: string;
+}
+
+export interface BestDayResponse {
+  ranking: BestDayRank[];
+  reason: string;
+}
