@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-mangum
-httpx
-pydantic>=2
-python-dotenv
-boto3
-strands-agents[gemini]
-pytest
