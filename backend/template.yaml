@@ -30,6 +30,24 @@ Parameters:
     NoEcho: true
     Default: ''
 
+Globals:
+  Function:
+    Runtime: python3.12
+    CodeUri: .
+    MemorySize: 1024
+    Environment:
+      Variables:
+        STORE: dynamo
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        MODEL_PROVIDER: !Ref ModelProvider
+        GEMINI_API_KEY: !Ref GeminiApiKey
+        GEMINI_MODEL_ID: !Ref GeminiModelId
+        GEMINI_FALLBACK_MODEL_ID: !Ref GeminiFallbackModelId
+        AGENT_TIMEOUT_S: '20'
+        OPENAQ_API_KEY: !Ref OpenAqApiKey
+        DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
+        CACHE_TABLE: !Ref CacheTable
+
 Resources:
   SchoolsTable:
     Type: AWS::DynamoDB::Table
@@ -62,23 +80,8 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
       Handler: app.handler
-      Runtime: python3.12
       Timeout: 30
-      MemorySize: 1024
-      Environment:
-        Variables:
-          STORE: dynamo
-          BEDROCK_MODEL_ID: !Ref BedrockModelId
-          MODEL_PROVIDER: !Ref ModelProvider
-          GEMINI_API_KEY: !Ref GeminiApiKey
-          GEMINI_MODEL_ID: !Ref GeminiModelId
-          GEMINI_FALLBACK_MODEL_ID: !Ref GeminiFallbackModelId
-          AGENT_TIMEOUT_S: '20'
-          OPENAQ_API_KEY: !Ref OpenAqApiKey
-          DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
-          CACHE_TABLE: !Ref CacheTable
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref SchoolsTable}
         - DynamoDBCrudPolicy: {TableName: !Ref CacheTable}
@@ -97,7 +100,27 @@ Resources:
             Path: /{proxy+}
             Method: ANY
 
+  DailyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: 06:00 IST daily job - computes and caches today's plan for every school (T19)
+      Handler: jobs.daily.handler
+      Timeout: 120
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref SchoolsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref CacheTable}
+      Events:
+        Daily:
+          Type: ScheduleV2
+          Properties:
+            Name: saans-daily-plan
+            ScheduleExpression: cron(0 6 * * ? *)
+            ScheduleExpressionTimezone: Asia/Kolkata
+
 Outputs:
   ApiUrl:
     Description: Base API URL (use as VITE_API_URL)
     Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
+  DailyFunctionName:
+    Description: Daily job Lambda (aws lambda invoke --function-name <this>)
+    Value: !Ref DailyFunction

@@ -52,6 +52,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (swap exchange / sources / README) | Claude | 106 passed | passed |
 | Fri 9 Oct 2026 (monitors + number guard) | Claude | 118 passed | passed |
 | Fri 9 Oct 2026 (calibration note) | Claude | 125 passed | passed |
+| Fri 9 Oct 2026 (T19) | Claude | 138 passed | passed |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -77,7 +78,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
 | T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
-| T19 | Daily EventBridge job | Cursor | T12 | TODO | |
+| T19 | Daily EventBridge job | Cursor | T12 | DONE (not yet deployed) | `DailyFunction` (jobs/daily.py) via EventBridge Scheduler `cron(0 6 * * ? *)` Asia/Kolkata → saans-cache `school_id#date` {rows, sources, plan, stored_at}. /today serves it as mode "cached" if < 3 h old (re-planned so `now` is current; generated_at = fetch time), else live; cache errors → live. |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE (minimal) | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
@@ -112,6 +113,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — rules.py text fix (Claude): Very Poor non-assembly activities said "use the PA system or classroom for assembly" (seen in live Ask fallback for PE). Now PA text only for assembly; others "Hold <activity> indoors." Levels/rule_ids unchanged. Live Ask (replay) returned fallback — cause (timeout vs number guard) to be read from CloudWatch. Amplify app `d6f34l6r9rpi9` is Git-connected (auto-builds on push; no manual upload).
 - 2026-10-09 — Amplify (Claude): Git-connected app builds on every push (job 20 SUCCEED). Branch had no env vars, so `frontend/.env.production` now sets public `VITE_API_URL`. Live Ask fallback cause: Gemini 503 "high demand" (transient); deterministic fallback worked.
 - 2026-10-09 — Gemini reliability (Claude): Strands' built-in retry (6 attempts from 4 s) disabled via `retry_strategy=None`; our policy: retry 503/429/500/504/timeouts up to 2× (0.5 s, 1.5 s) within the 20 s budget, then `GEMINI_FALLBACK_MODEL_ID` (new SAM param `GeminiFallbackModelId`, default `gemini-3.8-flash-lite` — UNVERIFIED: GEMINI_API_KEY not in agent shell, human to check models list), then plan summary. Non-retryable (e.g. 404) skips to fallback model. Logs which model answered; /api/ask returns `model`.
+- 2026-10-09 — T19 (Claude): template env vars moved to `Globals.Function` (shared by ApiFunction + DailyFunction); output `DailyFunctionName`. Plan cache = `PlanCache` protocol in store.py (`JsonPlanCache` local at data/plan_cache.json, git-ignored; `DynamoPlanCache` stores body as JSON string). tests/conftest.py isolates the local cache.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

@@ -9,3 +9,4 @@ backend/.env
 backend/.venv/
 frontend/dist/
 frontend/node_modules/
+backend/data/plan_cache.json

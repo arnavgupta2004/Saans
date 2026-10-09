@@ -29,3 +29,27 @@ class DynamoStore:
   item=self.table.get_item(Key={'id':school_id}).get('Item'); return School.model_validate(item) if item else None
  def save(self,school): self.table.put_item(Item=json.loads(school.model_dump_json(),parse_float=Decimal)); return school
 def get_store(): return DynamoStore() if os.getenv('STORE','json')=='dynamo' else JsonStore(Path(__file__).resolve().parents[1]/'data'/'schools.json')
+
+
+class PlanCache(Protocol):
+ def get(self, key:str)->dict|None: ...
+ def put(self, key:str, item:dict)->None: ...
+class JsonPlanCache:
+ """Local-dev plan cache (same interface as DynamoPlanCache)."""
+ def __init__(self,path:str|Path): self.path=Path(path); self.path.parent.mkdir(parents=True,exist_ok=True)
+ def _all(self)->dict: return json.loads(self.path.read_text()) if self.path.exists() else {}
+ def get(self,key): return self._all().get(key)
+ def put(self,key,item):
+  rows=self._all(); rows[key]=item; self.path.write_text(json.dumps(rows))
+class DynamoPlanCache:
+ """saans-cache table: {key: "<school_id>#<date>", body: JSON string, stored_at: epoch seconds}."""
+ def __init__(self,table_name:str|None=None,resource=None): self.table=(resource or boto3.resource('dynamodb')).Table(table_name or os.getenv('CACHE_TABLE','saans-cache'))
+ def get(self,key):
+  item=self.table.get_item(Key={'key':key}).get('Item')
+  return {**json.loads(item['body']),'stored_at':float(item['stored_at'])} if item else None
+ def put(self,key,item):
+  body={k:v for k,v in item.items() if k!='stored_at'}
+  self.table.put_item(Item={'key':key,'body':json.dumps(body),'stored_at':int(item['stored_at'])})
+def get_plan_cache()->PlanCache:
+ if os.getenv('STORE','json')=='dynamo': return DynamoPlanCache()
+ return JsonPlanCache(os.getenv('PLAN_CACHE_PATH',str(Path(__file__).resolve().parents[1]/'data'/'plan_cache.json')))

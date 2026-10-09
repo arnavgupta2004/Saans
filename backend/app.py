@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import time
+from datetime import datetime
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
@@ -12,8 +14,8 @@ from pydantic import BaseModel
 from saans.forecast import load_forecast
 from saans.models import DayPlan, School
 from saans.sources import load_replay
-from saans.planner import best_day, plan_day, plan_week
-from saans.store import SchoolStore, get_store
+from saans.planner import IST, best_day, plan_day, plan_week
+from saans.store import SchoolStore, get_plan_cache, get_store
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,24 @@ def _forecast(school: School) -> tuple[list[dict], dict, str]:
     return load_forecast(school)
 
 
+CACHE_MAX_AGE_S = 3 * 3600
+
+
+def _cached_day_plan(school: School) -> DayPlan | None:
+    """Plan precomputed by the 06:00 IST daily job, if < 3 h old. Re-planned from the cached rows so `now` is
+    the current hour and timetable edits apply; generated_at keeps the time the data was fetched."""
+    today = datetime.now(IST).date().isoformat()
+    try:
+        item = get_plan_cache().get(f"{school.id}#{today}")
+    except Exception as exc:
+        logger.warning("Plan cache unavailable (%s: %s); using live forecast", type(exc).__name__, exc)
+        return None
+    if not item or time.time() - float(item.get("stored_at", 0)) >= CACHE_MAX_AGE_S or not item.get("rows"):
+        return None
+    plan = plan_day(school, item["rows"], today, item.get("sources"), "cached")
+    return plan.model_copy(update={"generated_at": item["plan"]["generated_at"]})
+
+
 def _day_plan(school: School, replay: str | None = None) -> DayPlan:
     if replay:
         try:
@@ -44,6 +64,9 @@ def _day_plan(school: School, replay: str | None = None) -> DayPlan:
             raise HTTPException(status_code=404, detail=f"Unknown replay '{replay}'") from exc
         source = {"forecast": "recorded", "observation": "none"}
         return plan_day(school, rows, recorded, source, "replay", replay_date=recorded)
+    cached = _cached_day_plan(school)
+    if cached:
+        return cached
     rows, source, mode = _forecast(school)
     date = rows[0]["time"][:10]
     try:
