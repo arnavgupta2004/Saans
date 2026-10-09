@@ -29,6 +29,10 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ''
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: Email that receives CloudWatch alarm notifications (empty = no SNS topic)
 
 Globals:
   Function:
@@ -48,6 +52,9 @@ Globals:
         OPENAQ_API_KEY: !Ref OpenAqApiKey
         DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
         CACHE_TABLE: !Ref CacheTable
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
 
 Resources:
   SchoolsTable:
@@ -118,6 +125,21 @@ Resources:
             ScheduleExpression: cron(0 6 * * ? *)
             ScheduleExpressionTimezone: Asia/Kolkata
 
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlertEmail
+    Properties:
+      TopicName: saans-alerts
+      DisplayName: Saans alerts
+
+  AlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
   ApiErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -133,6 +155,7 @@ Resources:
       Threshold: 5
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref AlertTopic], !Ref AWS::NoValue]
 
   DailyErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -149,6 +172,7 @@ Resources:
       Threshold: 5
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref AlertTopic], !Ref AWS::NoValue]
 
 Outputs:
   ApiUrl:
