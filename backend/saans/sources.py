@@ -86,8 +86,11 @@ def parse_cpcb_records(records: list[dict[str, Any]], lat: float, lon: float) ->
     chosen=min(choices,key=lambda g:_distance(lat,lon,g["latitude"],g["longitude"]))
     return {"station":chosen["station"],"distance_km":round(_distance(lat,lon,chosen["latitude"],chosen["longitude"]),2),"pm25":chosen["pm25"],"pm10":chosen.get("pm10"),"observed_at":chosen.get("observed_at"),"provider":"cpcb"}
 
+# data.gov.in refuses connections from AWS (ConnectError 111): fail fast so /today is never slowed.
+CPCB_TIMEOUT = httpx.Timeout(10, connect=3)
+
 class CpcbClient:
-    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None): self.api_key, self.client = api_key or os.getenv("DATA_GOV_IN_API_KEY"), client or httpx.Client(timeout=15)
+    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None): self.api_key, self.client = api_key or os.getenv("DATA_GOV_IN_API_KEY"), client or httpx.Client(timeout=CPCB_TIMEOUT)
     def _live_records(self) -> list[dict[str, Any]]:
         if not self.api_key: raise RuntimeError("DATA_GOV_IN_API_KEY missing")
         response=self.client.get(CPCB_URL,params={"api-key":self.api_key,"format":"json","limit":10000})
@@ -117,6 +120,7 @@ def load_replay(key: str) -> tuple[list[dict[str, Any]], str]:
 
 
 OPENAQ_URL = "https://api.openaq.org/v3/parameters/2/latest"  # parameter 2 = PM2.5
+OPENAQ_LOCATIONS_URL = "https://api.openaq.org/v3/locations"
 OPENAQ_RADIUS_M = 25000
 OPENAQ_MAX_AGE_S = 2 * 3600
 
@@ -132,7 +136,22 @@ class OpenAqClient:
         response.raise_for_status()
         results = response.json().get("results")
         if not isinstance(results, list): raise RuntimeError("OpenAQ: unexpected response shape (no 'results' list)")
-        return _Cache.put(key, parse_openaq_results(results, lat, lon))
+        result = parse_openaq_results(results, lat, lon)
+        name = self._location_name(result.pop("location_id", None))
+        if name: result["station"] = name
+        return _Cache.put(key, result)
+    def _location_name(self, location_id: Any) -> str | None:
+        """Human-readable station name from /v3/locations/{id}; the reading is still used if this fails."""
+        if location_id is None: return None
+        key = f"openaq-name:{location_id}"; cached = _Cache.get(key)
+        if cached: return cached
+        try:
+            response = self.client.get(f"{OPENAQ_LOCATIONS_URL}/{location_id}", headers={"X-API-Key": self.api_key})
+            response.raise_for_status()
+            name = (response.json().get("results") or [{}])[0].get("name")
+        except Exception as exc:
+            logger.warning("OpenAQ location name lookup failed for %s: %s: %s", location_id, type(exc).__name__, exc); return None
+        return _Cache.put(key, str(name)) if name else None
 
 def parse_openaq_results(results: list[dict[str, Any]], lat: float, lon: float, now: datetime | None = None) -> dict[str, Any]:
     """Pick the nearest fresh sensor reading (<2h old, ≤25 km, numeric non-negative value)."""
@@ -151,4 +170,5 @@ def parse_openaq_results(results: list[dict[str, Any]], lat: float, lon: float, 
     if best is None: raise RuntimeError(f"OpenAQ: no fresh PM2.5 sensor within 25 km in {len(results)} results")
     distance, row, observed = best
     return {"station": f"OpenAQ location {row.get('locationsId', row.get('sensorsId', '?'))}", "distance_km": round(distance, 2), "pm25": _num(row["value"]), "pm10": None,
-            "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq"}
+            "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq",
+            "location_id": row.get("locationsId")}

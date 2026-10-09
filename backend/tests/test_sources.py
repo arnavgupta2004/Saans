@@ -95,6 +95,8 @@ def test_openaq_client_requires_key_and_sends_header(monkeypatch) -> None:
         OpenAqClient(api_key=None).latest_near(1, 2)
     seen = {}
     def handler(req):
+        if not req.url.path.endswith("/latest"):
+            return httpx.Response(404)
         seen["key"] = req.headers.get("x-api-key"); seen["q"] = dict(req.url.params)
         from datetime import datetime
         from saans.sources import IST
@@ -142,3 +144,33 @@ def test_chain_prefers_cpcb_then_openaq_then_uncalibrated(monkeypatch) -> None:
     fc = _patch_chain(monkeypatch, RuntimeError("down"), RuntimeError("no key"))
     rows, src, _ = fc.load_forecast(_school())
     assert src["observation"] == "none" and rows[0]["calibrated"] is False
+
+
+def test_cpcb_connect_timeout_is_3s() -> None:
+    c = CpcbClient(api_key="k")
+    assert c.client.timeout.connect == 3
+
+
+def test_openaq_station_is_location_name(monkeypatch) -> None:
+    from datetime import datetime
+    from saans.sources import IST, OpenAqClient
+    monkeypatch.delenv("OPENAQ_API_KEY", raising=False); _Cache.values.clear()
+    def handler(req):
+        if req.url.path.endswith("/latest"):
+            return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat(), loc=8118)]})
+        assert req.url.path == "/v3/locations/8118"
+        return httpx.Response(200, json={"results": [{"id": 8118, "name": "Anand Vihar, Delhi - DPCC"}]})
+    r = OpenAqClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
+    assert r["station"] == "Anand Vihar, Delhi - DPCC"
+
+
+def test_openaq_name_lookup_failure_keeps_reading(monkeypatch) -> None:
+    from datetime import datetime
+    from saans.sources import IST, OpenAqClient
+    _Cache.values.clear()
+    def handler(req):
+        if req.url.path.endswith("/latest"):
+            return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat(), loc=7)]})
+        return httpx.Response(500)
+    r = OpenAqClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
+    assert r["pm25"] == 60 and r["station"] == "OpenAQ location 7"
