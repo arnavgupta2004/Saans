@@ -126,7 +126,7 @@ def ask(request: AskRequest) -> dict:
     answer = "Saans' assistant is unavailable right now. Please use today's deterministic safety plan."
     if request.lang == "hi":
         answer = "Saans सहायक अभी उपलब्ध नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"
-    return {"answer": answer, "tools_used": [], "verified": False, "fallback": True}
+    return {"answer": answer, "tools_used": [], "verified": False, "fallback": True, "model": None}
 
 
 handler = Mangum(app)

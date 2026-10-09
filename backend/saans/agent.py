@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Any, Callable
 
@@ -127,7 +128,7 @@ def deterministic_answer(school_id: str, lang: str = "en", replay: str | None = 
         if p.swap:
             line += f" ⇄ {p.swap.with_label} {p.swap.to_start} (AQI {p.swap.to_aqi})"
         lines.append(line)
-    return {"answer": "\n".join(lines), "tools_used": [], "verified": False, "fallback": True}
+    return {"answer": "\n".join(lines), "tools_used": [], "verified": False, "fallback": True, "model": None}
 
 
 def _env(name: str) -> str:
@@ -137,21 +138,76 @@ def _env(name: str) -> str:
     return value
 
 
-def _model():
+def _model(model_id: str | None = None):
     """Bedrock by default; MODEL_PROVIDER=gemini uses Strands' Gemini provider. Model ids come only from env (SAM params)."""
-    if os.getenv("MODEL_PROVIDER", "bedrock").lower() == "gemini":
+    if _provider() == "gemini":
         from strands.models.gemini import GeminiModel
-        return GeminiModel(client_args={"api_key": _env("GEMINI_API_KEY")}, model_id=_env("GEMINI_MODEL_ID"))
+        return GeminiModel(client_args={"api_key": _env("GEMINI_API_KEY")}, model_id=model_id or _env("GEMINI_MODEL_ID"))
     from strands.models import BedrockModel
-    return BedrockModel(model_id=_env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
+    return BedrockModel(model_id=model_id or _env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
 
 
-def _run_agent(tools: list[Callable], prompt: str) -> tuple[str, list[str]]:
+def _provider() -> str:
+    return os.getenv("MODEL_PROVIDER", "bedrock").lower()
+
+
+def _candidate_models() -> list[str]:
+    """Primary model, then (Gemini only) the lighter GEMINI_FALLBACK_MODEL_ID if configured."""
+    if _provider() != "gemini":
+        return [_env("BEDROCK_MODEL_ID")]
+    fallback = os.getenv("GEMINI_FALLBACK_MODEL_ID", "").strip()
+    primary = _env("GEMINI_MODEL_ID")
+    return [primary] + ([fallback] if fallback and fallback != primary else [])
+
+
+_RETRY_CODES = {429, 500, 503, 504}
+_BACKOFF_S = (0.5, 1.5)
+_sleep = time.sleep
+
+
+def _retryable(exc: BaseException) -> bool:
+    """Overload / rate-limit / timeout errors worth retrying (Gemini 503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED)."""
+    for e in (exc, exc.__cause__):
+        if e is None:
+            continue
+        code = getattr(e, "code", None) or getattr(e, "status_code", None)
+        if code in _RETRY_CODES or isinstance(e, TimeoutError) or type(e).__name__ in {"ModelThrottledException", "TimeoutException", "ReadTimeout", "ConnectTimeout"}:
+            return True
+        if any(word in str(e) for word in ("UNAVAILABLE", "RESOURCE_EXHAUSTED", "high demand")):
+            return True
+    return False
+
+
+def _invoke(model_id: str, tools: list[Callable], prompt: str) -> tuple[str, list[str]]:
     from strands import Agent, tool
 
-    agent = Agent(model=_model(), system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in tools])
+    # retry_strategy=None turns off Strands' own retries (6 attempts from 4 s) so our budgeted policy decides.
+    agent = Agent(model=_model(model_id), system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in tools], retry_strategy=None)
     result = agent(prompt)
     return str(result), [name for name in getattr(result.metrics, "tool_metrics", {}) or {}]
+
+
+def _run_agent(tools: list[Callable], prompt: str, deadline: float | None = None) -> tuple[str, list[str], str]:
+    """Try each candidate model; retry transient errors up to 2 times (0.5 s, 1.5 s) while the deadline allows.
+    Non-retryable errors (e.g. 404 model unavailable) move straight to the next model. Raises the last error."""
+    last: BaseException | None = None
+    for model_id in _candidate_models():
+        for attempt in range(len(_BACKOFF_S) + 1):
+            try:
+                answer, used = _invoke(model_id, tools, prompt)
+                logger.info("Agent answered with model %s (attempt %d)", model_id, attempt + 1)
+                return answer, used, model_id
+            except Exception as exc:
+                last = exc
+                logger.warning("Model %s attempt %d failed: %s: %s", model_id, attempt + 1, type(exc).__name__, exc)
+                if not _retryable(exc) or attempt == len(_BACKOFF_S):
+                    break
+                delay = _BACKOFF_S[attempt]
+                if deadline is not None and time.monotonic() + delay + 1.0 > deadline:
+                    break  # not enough budget left to wait; try the next model
+                _sleep(delay)
+    assert last is not None
+    raise last
 
 
 def ask(school_id: str, question: str, lang: str = "en", replay: str | None = None) -> dict:
@@ -163,9 +219,9 @@ def ask(school_id: str, question: str, lang: str = "en", replay: str | None = No
     # API Gateway cuts requests at 30 s; give the model a budget and fall back to the plan summary if it is slow.
     budget = float(os.getenv("AGENT_TIMEOUT_S", "20"))
     pool = ThreadPoolExecutor(max_workers=1)
-    future = pool.submit(_run_agent, make_tools(replay, sink), f"{context} {question}")
+    future = pool.submit(_run_agent, make_tools(replay, sink), f"{context} {question}", time.monotonic() + budget)
     try:
-        answer, used = future.result(timeout=budget)
+        answer, used, model = future.result(timeout=budget)
     except FutureTimeout:
         logger.warning("Agent timed out after %.1fs for school %s; returning deterministic answer", budget, school_id)
         return {**deterministic_answer(school_id, lang, replay), "timed_out": True}
@@ -176,4 +232,4 @@ def ask(school_id: str, question: str, lang: str = "en", replay: str | None = No
     if bad:
         logger.warning("Agent answer had numbers not in tool outputs %s; returning deterministic answer. Answer was: %r", bad, answer)
         return deterministic_answer(school_id, lang, replay)
-    return {"answer": answer, "tools_used": used, "verified": True}
+    return {"answer": answer, "tools_used": used, "verified": True, "model": model}

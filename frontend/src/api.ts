@@ -77,6 +77,8 @@ export interface AskResponse {
   verified: boolean;
   /** true = the deterministic plan summary was returned instead of the model's answer */
   fallback?: boolean;
+  /** model that answered (null when the deterministic plan summary was returned) */
+  model?: string | null;
 }
 
 export const askSaans = async (schoolId: string, question: string, lang: 'en' | 'hi', replay?: string): Promise<AskResponse> => {
