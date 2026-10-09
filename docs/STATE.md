@@ -134,6 +134,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-10 — Notice honesty (Claude, found in screenshots): notice said "moved to 09:20" for OPTIONAL swaps and announced required swaps as done. Now: optional swaps not mentioned; required swaps offered ("Hold PE indoors, or move it to 13:40 (Moderate, AQI 127)."); asthma line labelled "Students with asthma:"; GET /notice accepts `replay`. NEEDS BACKEND DEPLOY.
 - 2026-10-10 — Screenshots (Claude): frontend devDependency `playwright@1.55.0` (+ `npx playwright install chromium`); `npm run shots [url]` → docs/img/*.png at 375×812 against the deployed app.
 - 2026-10-10 — Frontend polish live on Amplify (job ba4b7b6 SUCCEED, ~01:25 IST). Backend build with CORS + notice fixes is in backend/.aws-sam (built from cf56392); agent S3 upload stalled at 87% and was stopped — human to run `sam deploy` (no params). Then re-shoot docs/img (step 3).
+- 2026-10-10 — Backend CORS + notice fixes deployed by human (~01:40 IST); preflight 200, notice offers swaps. Screenshot review: Ask answer said "recorded data from replay_date 2025-11-19" (prompt used the field name) → SYSTEM_PROMPT reworded + "never mention tool or field names" (NEEDS BACKEND DEPLOY). School picker uses area names (no truncation).
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

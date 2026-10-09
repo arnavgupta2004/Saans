@@ -9,9 +9,9 @@ import { Calendar, MessageCircle, Bell, CalendarDays, Settings, Wind } from 'luc
 import { School } from './types';
 
 const DEMO_SCHOOLS = [
-  { id: 'delhi-anand-vihar', name: 'Anand Vihar · Delhi' },
-  { id: 'delhi-dwarka', name: 'Dwarka · Delhi' },
-  { id: 'bengaluru-indiranagar', name: 'Indiranagar · Bengaluru' },
+  { id: 'delhi-anand-vihar', name: 'Anand Vihar' },
+  { id: 'delhi-dwarka', name: 'Dwarka' },
+  { id: 'bengaluru-indiranagar', name: 'Indiranagar' },
 ];
 
 type Tab = 'today' | 'week' | 'notice' | 'ask' | 'setup';

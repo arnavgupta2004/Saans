@@ -259,3 +259,8 @@ def test_replay_prompt_context_names_recorded_date(monkeypatch) -> None:
     monkeypatch.setattr(agent, "_run_agent", fake)
     agent.ask(SID, "Is PE safe?", "en", replay="delhi-nov")
     assert "2025-11-19" in seen["p"] and "delhi-nov" not in seen["p"]
+
+
+def test_system_prompt_does_not_invite_field_names() -> None:
+    # Live answer once said "recorded data from replay_date 2025-11-19" because the prompt used the field name.
+    assert "from replay_date" not in agent.SYSTEM_PROMPT and "field names" in agent.SYSTEM_PROMPT
