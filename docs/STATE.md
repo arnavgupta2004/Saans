@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 17:08 IST (T06 complete; frontend T14 remains active)
+**Last updated:** Antigravity — Fri 9 Oct 2026, 17:45 IST (T15, T16 complete)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -14,8 +14,8 @@
 ## ▶ Resume here
 - **Task:** T14 — Frontend onboarding (TODO)
 - **Where:** `frontend/src/`
-- **Done so far:** T13 Today view completed using mock data in `api.ts`. Mobile-first, CPCB colors implemented.
-- **Next concrete step:** Implement the onboarding flow in a new view, with city preset or map pick.
+- **Done so far:** T15 (Week view) and T16 (Notice view) completed with mock data. Bottom tab navigation added.
+- **Next concrete step:** Implement the onboarding flow in a new view, with city preset or map pick (T14).
 - **Commands:** `cd frontend && npm run build`
 
 ---
@@ -28,6 +28,7 @@
 | Fri 9 Oct 2026, 16:42 IST | Codex | 1 passed | passed |
 | Fri 9 Oct 2026, 16:47 IST | Codex | 20 passed | passed |
 | Fri 9 Oct 2026, 16:51 IST | Codex | 41 passed | passed |
+| Fri 9 Oct 2026, 17:45 IST | Antigravity | not run | passed |
 
 ---
 
@@ -48,8 +49,8 @@
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |
 | T14 | Frontend onboarding | Antigravity | T10 | TODO | |
-| T15 | Frontend Week + Best day | Antigravity | T10 | TODO | |
-| T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | TODO | |
+| T15 | Frontend Week + Best day | Antigravity | T10 | DONE | Built with Recharts and mock data flag. |
+| T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | TODO | |
 | T18 | /api/ask + polished notice | Cursor | T17 | TODO | |
 | T19 | Daily EventBridge job | Cursor | T12 | TODO | |
@@ -68,6 +69,7 @@
 
 ## Decisions log (append only)
 - 2026-10-09 — Track 01 Air, sub-problem "School safety on bad days". Product: Saans. Stack per AGENTS.md §2. (Claude)
+- 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
 - T05: Open-Meteo live schema and three location forecasts verified. data.gov.in resource `3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69` could not be reached from this environment and no private API key was present, so CPCB uses a clearly labelled documented-shape fixture; live parser remains unverified.
@@ -81,3 +83,4 @@
 | Fri 16:47 | Codex → Codex | T04 complete. Begin T07 in `backend/saans/rules.py`. |
 | Fri 16:51 | Codex → Antigravity | T07 complete. Resume with T05 in `backend/saans/sources.py`. |
 | Fri 17:00 | Antigravity → next agent | T13 complete in frontend/ with mock data. Ready for T14 or T15. |
+| Fri 17:45 | Antigravity → next agent | T15 and T16 complete. Bottom tab navigation added. |
