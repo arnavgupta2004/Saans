@@ -56,12 +56,14 @@ def sub_index(pollutant: Pollutant, conc: float | int | None) -> int | None:
         return None
 
     # Bands are treated as contiguous: a decimal in a gap (e.g. 60.1 between 60 and 61) belongs to the band below.
+    # The reported band always comes from the final AQI number (see naqi), never from the concentration row.
     bands = BREAKPOINTS[pollutant]
     if concentration > bands[-1][1]:
         return 500
     concentration_low, concentration_high, index_low, index_high = next(b for b in reversed(bands) if concentration >= b[0])
     index = (index_high - index_low) / (concentration_high - concentration_low) * (concentration - concentration_low) + index_low
-    return min(500, round(index))
+    # Clamp to the band's upper index so a gap value (60.9) can never overshoot into the next band.
+    return min(500, index_high, round(index))
 
 
 def band_for_aqi(aqi: int) -> str:

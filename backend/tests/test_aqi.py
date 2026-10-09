@@ -39,7 +39,30 @@ def test_band_metadata_covers_every_aqi_band() -> None:
 def test_decimal_values_in_breakpoint_gaps_are_not_severe() -> None:
     from saans.aqi import naqi, sub_index
     assert naqi(60.1, 158.8) == (139, "Moderate", "pm10")
-    assert sub_index("pm25", 60.5) == 101 and sub_index("pm10", 100.5) == 100
-    assert sub_index("pm25", 30.5) == 51 and sub_index("pm25", 250.5) == 400
+    assert sub_index("pm25", 30.5) == 50 and sub_index("pm25", 0) == 0
     assert sub_index("pm25", 350.0) == 500 and sub_index("pm25", 351) == 500
-    assert sub_index("pm25", 0) == 0
+
+
+def test_pm25_60_9_is_satisfactory() -> None:
+    from saans.aqi import naqi
+    aqi, band, _ = naqi(60.9, 0)
+    assert aqi <= 100 and band == "Satisfactory"
+
+
+def test_pm10_100_5_is_at_most_100() -> None:
+    from saans.aqi import naqi
+    aqi, band, _ = naqi(0, 100.5)
+    assert aqi <= 100 and band == "Satisfactory"
+
+
+def test_pm25_250_5_is_very_poor() -> None:
+    from saans.aqi import naqi
+    aqi, band, _ = naqi(250.5, 0)
+    assert aqi <= 400 and band == "Very Poor"
+
+
+def test_band_follows_final_aqi_number() -> None:
+    from saans.aqi import band_for_aqi, naqi
+    for pm25 in (x / 10 for x in range(0, 3600, 7)):
+        aqi, band, _ = naqi(pm25, None)
+        assert band == band_for_aqi(aqi)
