@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 18:20 IST (T09 complete)
+**Last updated:** Codex — Fri 9 Oct 2026, 18:35 IST (T10 in progress)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -46,7 +46,7 @@
 | T07 | rules.py + tests | Cursor | T04 | DONE | Deterministic activity/sensitive-student protocol actions with simple Hindi text; every table cell tested. Tests: 41 passed; frontend build passed. |
 | T08 | models.py + store.py + seed schools | Cursor | T03 | TODO | |
 | T09 | planner.py + tests | Cursor | T06, T07, T08 | DONE | Planner rules tested (51 passed). Fixture E2E table: `PE | 362 | Very Poor | indoors | 13:00–13:40 (AQI 33, Good)`. |
-| T10 | app.py endpoints | Cursor | T09 | TODO | |
+| T10 | app.py endpoints | Cursor | T09 | IN PROGRESS (Codex, 18:35 IST) | |
 | T11 | notices.py EN/HI + WhatsApp URL | Cursor | T09 | TODO | |
 | T12 | SAM deploy walking skeleton | Cursor + Human | T10, T02 | TODO | |
 | T13 | Frontend Today view | Antigravity | T10 | DONE | Built with mock data flag. Mobile-first, CPCB colors, action reasons included. |

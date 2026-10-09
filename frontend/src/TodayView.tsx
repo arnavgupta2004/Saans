@@ -4,7 +4,7 @@ import { DayPlan, PeriodPlan } from './types';
 import { getBandColor, getActionColor } from './utils/colors';
 import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
 
-export default function TodayView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
+export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

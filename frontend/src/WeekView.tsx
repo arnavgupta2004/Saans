@@ -51,7 +51,7 @@ export default function WeekView({ activeSchoolId = 'delhi-anand-vihar' }: { act
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200">
-      <header className="bg-white px-5 pt-14 pb-5 border-b border-slate-100">
+      <header className="bg-white px-5 pt-6 pb-5 border-b border-slate-100">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Week Overview</h1>
       </header>
 

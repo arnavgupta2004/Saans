@@ -3,7 +3,7 @@ import { getNotice } from './api';
 import { useLanguage } from './LanguageContext';
 import { Copy, Share2, Check } from 'lucide-react';
 
-export default function NoticeView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
+export default function NoticeView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
   const { lang, t } = useLanguage();
   const [noticeLang, setNoticeLang] = useState<'en'|'hi'>(lang);
   const [noticeData, setNoticeData] = useState<any>(null);

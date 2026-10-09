@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Period, School } from './types';
+import { saveSchool } from './api';
 import { MapPin, Plus, Trash2, Save } from 'lucide-react';
 
 const CITY_PRESETS = [
@@ -8,36 +9,49 @@ const CITY_PRESETS = [
   { id: 'bengaluru-indiranagar', label: 'Bengaluru – Indiranagar', lat: 12.9784, lon: 77.6408 },
 ];
 
+const DEFAULT_PERIODS: Period[] = [
+  { id: '1', label: 'Morning Assembly', start: '08:00', end: '08:30', type: 'assembly', intensity: 'low', outdoor: true, swappable: false },
+  { id: '2', label: 'Class 7B PE', start: '08:40', end: '09:20', type: 'pe', intensity: 'high', outdoor: true, swappable: true },
+];
+
 export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoolId: string, onSave: (s: School) => void }) {
+  const initialPreset = CITY_PRESETS.find(p => p.id === activeSchoolId) ?? CITY_PRESETS[0];
   const [name, setName] = useState('Demo School');
-  const [cityPreset, setCityPreset] = useState(CITY_PRESETS[0].id);
-  const [lat, setLat] = useState(CITY_PRESETS[0].lat);
-  const [lon, setLon] = useState(CITY_PRESETS[0].lon);
+  const [cityPreset, setCityPreset] = useState(initialPreset.id);
+  const [lat, setLat] = useState(initialPreset.lat);
+  const [lon, setLon] = useState(initialPreset.lon);
+  const [usingMyLocation, setUsingMyLocation] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const [asthmaCount, setAsthmaCount] = useState(38);
-  const [periods, setPeriods] = useState<Period[]>([
-    { id: '1', label: 'Morning Assembly', start: '08:00', end: '08:30', type: 'assembly', intensity: 'low', outdoor: true, swappable: false },
-    { id: '2', label: 'Class 7B PE', start: '08:40', end: '09:20', type: 'pe', intensity: 'high', outdoor: true, swappable: true },
-  ]);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [periods, setPeriods] = useState<Period[]>(DEFAULT_PERIODS);
 
   const handleLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition((pos) => {
+    setGeoError(null);
+    if (!('geolocation' in navigator)) {
+      setGeoError('Geolocation is not available in this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
         setLat(pos.coords.latitude);
         setLon(pos.coords.longitude);
-        setCityPreset('custom');
-      });
-    }
+        setUsingMyLocation(true);
+      },
+      () => {
+        setGeoError('Could not read location. Choose a city preset instead.');
+      },
+    );
   };
 
   const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setCityPreset(val);
-    if (val !== 'custom') {
-      const preset = CITY_PRESETS.find(p => p.id === val);
-      if (preset) {
-        setLat(preset.lat);
-        setLon(preset.lon);
-      }
+    setUsingMyLocation(false);
+    const preset = CITY_PRESETS.find(p => p.id === val);
+    if (preset) {
+      setLat(preset.lat);
+      setLon(preset.lon);
     }
   };
 
@@ -58,22 +72,31 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
     setPeriods(periods.filter(p => p.id !== id));
   };
 
-  const updatePeriod = (id: string, field: keyof Period, value: any) => {
+  const updatePeriod = (id: string, field: keyof Period, value: Period[keyof Period]) => {
     setPeriods(periods.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
-  const handleSave = () => {
-    onSave({
+  const handleSave = async () => {
+    const school: School = {
       id: activeSchoolId,
       name,
-      city: cityPreset === 'custom' ? 'Custom Location' : CITY_PRESETS.find(p => p.id === cityPreset)?.label || '',
+      city: usingMyLocation
+        ? 'My location'
+        : CITY_PRESETS.find(p => p.id === cityPreset)?.label || '',
       lat,
       lon,
       timetable: periods,
       sensitive_count: asthmaCount,
       languages: ['en', 'hi']
-    });
-    alert('Settings saved! (Local only for demo)');
+    };
+    setSaveState('saving');
+    try {
+      const saved = await saveSchool(school);
+      onSave(saved);
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
   };
 
   return (
@@ -91,56 +114,71 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
 
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Location</label>
-            <div className="flex gap-2">
-              <select value={cityPreset} onChange={handleCityChange} className="flex-1 bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold">
-                {CITY_PRESETS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                <option value="custom">Custom Location</option>
-              </select>
-              <button onClick={handleLocation} className="bg-slate-100 hover:bg-slate-200 p-2.5 rounded-lg text-slate-600 transition" title="Use my location">
-                <MapPin className="w-5 h-5" />
-              </button>
-            </div>
-            {cityPreset === 'custom' && (
+            <select value={cityPreset} onChange={handleCityChange} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold">
+              {CITY_PRESETS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={handleLocation}
+              className="mt-2 w-full bg-slate-100 hover:bg-slate-200 p-2.5 rounded-lg text-slate-700 text-sm font-semibold transition flex items-center justify-center gap-2"
+            >
+              <MapPin className="w-4 h-4" />
+              Use my location
+            </button>
+            {usingMyLocation && (
               <p className="text-xs text-slate-400 mt-1">Lat: {lat.toFixed(4)}, Lon: {lon.toFixed(4)}</p>
             )}
+            {geoError && <p className="text-xs text-red-600 mt-1">{geoError}</p>}
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Students with Asthma</label>
-            <input type="number" value={asthmaCount} onChange={e => setAsthmaCount(parseInt(e.target.value) || 0)} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold" />
-            <p className="text-[10px] text-slate-400 mt-1 font-medium italic">Count only — no names or health records are stored.</p>
+            <input type="number" min={0} value={asthmaCount} onChange={e => setAsthmaCount(parseInt(e.target.value) || 0)} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold" />
+            <p className="text-[10px] text-slate-400 mt-1 font-medium italic">count only — no names or health records</p>
           </div>
         </section>
 
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Timetable Editor</h2>
-            <button onClick={addPeriod} className="text-blue-600 flex items-center gap-1 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">
+            <button type="button" onClick={addPeriod} className="text-blue-600 flex items-center gap-1 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">
               <Plus className="w-3 h-3" /> Add Row
             </button>
           </div>
           
           <div className="space-y-3">
-            {periods.map((p, i) => (
+            {periods.map((p) => (
               <div key={p.id} className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm relative">
-                <button onClick={() => removePeriod(p.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition">
+                <button type="button" onClick={() => removePeriod(p.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition" aria-label="Remove period">
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
                   <input type="text" value={p.label} onChange={e => updatePeriod(p.id, 'label', e.target.value)} placeholder="Period Label" className="col-span-2 bg-slate-50 border border-slate-100 rounded p-1.5 text-sm font-semibold w-full" />
-                  <input type="time" value={p.start} onChange={e => updatePeriod(p.id, 'start', e.target.value)} className="bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full" />
-                  <input type="time" value={p.end} onChange={e => updatePeriod(p.id, 'end', e.target.value)} className="bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full" />
-                  <select value={p.type} onChange={e => updatePeriod(p.id, 'type', e.target.value)} className="bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full">
-                    <option value="class">Class</option>
-                    <option value="pe">PE</option>
-                    <option value="assembly">Assembly</option>
-                    <option value="recess">Recess</option>
-                    <option value="sports">Sports</option>
-                  </select>
-                  <select value={p.intensity} onChange={e => updatePeriod(p.id, 'intensity', e.target.value)} className="bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full">
-                    <option value="low">Low Intensity</option>
-                    <option value="high">High Intensity</option>
-                  </select>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                    Start
+                    <input type="time" value={p.start} onChange={e => updatePeriod(p.id, 'start', e.target.value)} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800" />
+                  </label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                    End
+                    <input type="time" value={p.end} onChange={e => updatePeriod(p.id, 'end', e.target.value)} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800" />
+                  </label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                    Type
+                    <select value={p.type} onChange={e => updatePeriod(p.id, 'type', e.target.value as Period['type'])} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800">
+                      <option value="class">Class</option>
+                      <option value="pe">PE</option>
+                      <option value="assembly">Assembly</option>
+                      <option value="recess">Recess</option>
+                      <option value="sports">Sports</option>
+                    </select>
+                  </label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                    Intensity
+                    <select value={p.intensity} onChange={e => updatePeriod(p.id, 'intensity', e.target.value as Period['intensity'])} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800">
+                      <option value="low">Low</option>
+                      <option value="high">High</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="flex gap-4 items-center">
                   <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
@@ -157,9 +195,11 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
           </div>
         </section>
 
-        <button onClick={handleSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2">
-          <Save className="w-5 h-5" /> Save Configuration
+        <button type="button" onClick={handleSave} disabled={saveState === 'saving'} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-60">
+          <Save className="w-5 h-5" /> {saveState === 'saving' ? 'Saving…' : 'Save Configuration'}
         </button>
+        {saveState === 'saved' && <p className="text-center text-sm text-green-700 font-medium">Saved (mock API).</p>}
+        {saveState === 'error' && <p className="text-center text-sm text-red-600 font-medium">Could not save school.</p>}
       </main>
     </div>
   );
