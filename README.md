@@ -17,6 +17,14 @@ curl -X POST http://localhost:8000/api/ask -H 'Content-Type: application/json' -
 
 To create or replace a school, `POST` the `School` JSON returned by `/api/schools` to `/api/schools`.
 
+## Data sources
+
+CPCB via data.gov.in is preferred; when unreachable from AWS, Saans calibrates with CPCB station data via OpenAQ. The assistant is built with Strands Agents (AWS open source); Bedrock Nova Lite is supported, Gemini is used because our account's Bedrock access was blocked.
+
+- Forecast: Open-Meteo Air Quality API (hourly PM2.5/PM10).
+- Calibration chain: data.gov.in CPCB → OpenAQ v3 (nearest PM2.5 sensor ≤ 25 km, < 2 h old) → uncalibrated. `sources.observation` says which was used (e.g. `live:openaq`).
+- Replay: `/api/schools/{id}/today?replay=delhi-nov` serves a recorded Delhi day (19 Nov 2025), clearly labelled.
+
 ## Agent
 
-Agent built with Strands Agents (AWS open source); Bedrock Nova Lite supported, Gemini used while our account's Bedrock access was pending. Select with `MODEL_PROVIDER=bedrock|gemini` (Gemini needs `GEMINI_API_KEY`). Safety decisions always come from deterministic `rules.py`; the model only explains.
+Select the model with `MODEL_PROVIDER=bedrock|gemini`. Model ids come only from SAM parameters (`BedrockModelId`, `GeminiModelId`); Gemini needs `GEMINI_API_KEY`. Safety decisions always come from deterministic `rules.py`; the model only explains, and if it fails the API logs the exception and returns a deterministic fallback.
