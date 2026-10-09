@@ -7,6 +7,8 @@
 **Live app:** https://main.d6f34l6r9rpi9.amplifyapp.com  ·  **API:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com/api/health
 **Try a bad-air day:** https://main.d6f34l6r9rpi9.amplifyapp.com/?replay=delhi-nov (recorded Delhi data, 19 Nov 2025)
 
+<p align="center"><img src="docs/assets/demo.gif" width="300" alt="Saans demo: bad-air day, suggested swap, Hindi parent notice, Ask with checked numbers"></p>
+
 ---
 
 ## The problem
@@ -33,6 +35,8 @@
 More: [Today (live)](docs/img/today-live.png) · [Today in Hindi](docs/img/today-hi.png) · [Notice EN](docs/img/notice-en.png) · [Ask, waiting](docs/img/ask-waiting.png) · [Setup](docs/img/setup.png)
 
 ## Architecture
+
+![Saans on AWS](docs/assets/architecture.png)
 
 ```mermaid
 flowchart LR
