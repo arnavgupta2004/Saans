@@ -70,6 +70,8 @@ export interface Sources {
   observation: string;
   station?: string;
   distance_km?: number;
+  /** why the forecast is not calibrated, e.g. "Not calibrated: ...; nearest CPCB monitor via OpenAQ last reported 50 h ago" */
+  note?: string | null;
 }
 
 export interface DayPlan {

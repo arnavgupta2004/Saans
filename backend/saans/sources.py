@@ -161,6 +161,11 @@ def fresh_pm25(latest: list[dict[str, Any]], sensors: set[Any], now: datetime | 
         if ages_h is not None: ages_h.append(round(age_h, 1))
     return None
 
+class OpenAqUnavailable(RuntimeError):
+    """No usable OpenAQ reading; `note` is a short user-facing reason (e.g. how stale the freshest monitor is)."""
+    def __init__(self, message: str, note: str):
+        super().__init__(message); self.note = note
+
 class OpenAqClient:
     """Nearest reference-grade PM2.5 monitor (CPCB preferred) within 25 km via OpenAQ v3 (free API key)."""
     def __init__(self, api_key: str | None = None, client: httpx.Client | None = None):
@@ -176,13 +181,22 @@ class OpenAqClient:
         if cached: return {**cached, "source": "cached", "age_s": round(_Cache.age(key))}
         if not self.api_key: raise RuntimeError("OPENAQ_API_KEY missing")
         locations = self._get(OPENAQ_LOCATIONS_URL, coordinates=f"{lat},{lon}", radius=OPENAQ_RADIUS_M, monitor="true", parameters_id=2, limit=100)
-        reasons: Counter = Counter(); ages: list[float] = []
-        for loc, distance, sensors in rank_openaq_monitors(locations, lat, lon, reasons)[:OPENAQ_MAX_CANDIDATES]:
+        reasons: Counter = Counter(); ages: list[float] = []; freshest: tuple[float, bool] | None = None
+        ranked = rank_openaq_monitors(locations, lat, lon, reasons)
+        for loc, distance, sensors in ranked[:OPENAQ_MAX_CANDIDATES]:
+            before = len(ages)
             reading = fresh_pm25(self._get(f"{OPENAQ_LOCATIONS_URL}/{loc['id']}/latest"), sensors, reasons=reasons, ages_h=ages)
-            if not reading: continue
+            if not reading:
+                for age in ages[before:]:
+                    if freshest is None or age < freshest[0]: freshest = (age, _is_cpcb(loc))
+                continue
             value, observed = reading
             label = "CPCB via OpenAQ" if _is_cpcb(loc) else "reference monitor via OpenAQ"
             return _Cache.put(key, {"station": f"{loc.get('name') or 'OpenAQ location ' + str(loc['id'])} ({label})", "distance_km": round(distance, 2), "pm25": value, "pm10": None,
                                     "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq"})
         detail = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items()))
-        raise RuntimeError(f"OpenAQ: no reference monitor with fresh PM2.5 within 25 km ({len(locations)} locations returned; {detail}; stale ages h={ages[:8]})")
+        if freshest:
+            note = f"nearest {'CPCB' if freshest[1] else 'reference'} monitor via OpenAQ last reported {round(freshest[0])} h ago"
+        else:
+            note = "no reference monitor within 25 km on OpenAQ" if not ranked else "no usable PM2.5 reading on OpenAQ"
+        raise OpenAqUnavailable(f"OpenAQ: no reference monitor with fresh PM2.5 within 25 km ({len(locations)} locations returned; {detail}; stale ages h={ages[:8]})", note)

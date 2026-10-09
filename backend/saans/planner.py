@@ -58,7 +58,7 @@ def plan_day(school:School,hourly_cal:list[dict[str,Any]], date:str|Date, source
  actual_mode=mode or (forecast if forecast in ("live","cached","fixture","replay") else ("fixture" if any(p.get("source")=="fixture" for p in rows) else "live"))
  now=now or _today_ist()
  point_time=now.replace(hour=8,minute=0) if replay_date else now  # a replayed day is shown from the start of school
- return DayPlan(school_id=school.id,date=day,now=_pick_now(hours,point_time),periods=plans,worst_hour=worst.time,best_hour=best.time,sources=Sources(forecast=forecast,observation=source.get("observation","none"),station=source.get("station"),distance_km=source.get("distance_km")),mode=actual_mode,generated_at=now.astimezone(IST).isoformat(timespec="seconds"),replay_date=replay_date)
+ return DayPlan(school_id=school.id,date=day,now=_pick_now(hours,point_time),periods=plans,worst_hour=worst.time,best_hour=best.time,sources=Sources(forecast=forecast,observation=source.get("observation","none"),station=source.get("station"),distance_km=source.get("distance_km"),note=source.get("note")),mode=actual_mode,generated_at=now.astimezone(IST).isoformat(timespec="seconds"),replay_date=replay_date)
 def plan_week(school:School,hourly_cal:list[dict[str,Any]], sources:dict[str,Any]|None=None, mode:str|None=None)->dict[str,Any]:
  dates=sorted({p["time"][:10] for p in hourly_cal})[:5]; plans=[plan_day(school,hourly_cal,d,sources,mode) for d in dates]
  return {"days":[{"date":p.date,"worst_aqi":max(x.aqi for x in p.periods),"worst_band":max(p.periods,key=lambda x:x.aqi).band,"best_hour":p.best_hour,"worst_hour":p.worst_hour} for p in plans],"hourly":[_point(p) for p in hourly_cal]}

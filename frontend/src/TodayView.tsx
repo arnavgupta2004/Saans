@@ -180,6 +180,9 @@ export default function TodayView({
             ? `Source: recorded Open-Meteo data for ${plan.replay_date ?? plan.date} (not live, not calibrated)`
             : `Source: ${sources.forecast} forecast${now?.calibrated ? ` calibrated with ${sources.observation}${sources.station ? ` (${sources.station})` : ''}` : ' (not calibrated)'}`}
         </p>
+        {plan.mode !== 'replay' && !now?.calibrated && sources.note && (
+          <p className="text-[11px] text-amber-600 mt-1">{sources.note}</p>
+        )}
         <p className="text-[10px] text-slate-300 mt-1">
           Last updated: {new Date(plan.generated_at).toLocaleString()}
         </p>

@@ -196,3 +196,44 @@ def test_station_blank_when_observation_not_used(monkeypatch) -> None:
     fc = _patch_chain(monkeypatch, {**_LIVE_CPCB, "source": "fixture"}, RuntimeError("no monitor"))
     _, src, _ = fc.load_forecast(_school())
     assert src["observation"] == "fixture:cpcb" and src["station"] is None and src["distance_km"] is None
+
+
+def test_openaq_stale_error_carries_freshest_age_note() -> None:
+    import pytest
+    from saans.sources import OpenAqUnavailable
+    _Cache.values.clear()
+    locs = [_loc(2, "A", 28.66, 77.316), _loc(5, "B", 28.70, 77.316)]
+    from datetime import datetime, timedelta
+    from saans.sources import IST
+    old = (datetime.now(IST) - timedelta(hours=50)).isoformat(); older = "2018-02-22T02:45:00+05:30"
+    with pytest.raises(OpenAqUnavailable) as e:
+        _openaq(locs, {2: [_latest(20, 50, older), _latest(20, 51, old)], 5: [_latest(50, 60, older)]}).latest_near(28.647, 77.316)
+    assert e.value.note == "nearest CPCB monitor via OpenAQ last reported 50 h ago"
+
+
+def test_openaq_no_monitor_note() -> None:
+    import pytest
+    from saans.sources import OpenAqUnavailable
+    _Cache.values.clear()
+    with pytest.raises(OpenAqUnavailable) as e:
+        _openaq([_loc(1, "Air Check", 28.65, 77.316, monitor=False)], {}).latest_near(28.647, 77.316)
+    assert e.value.note == "no reference monitor within 25 km on OpenAQ"
+
+
+def test_calibration_note_in_sources(monkeypatch) -> None:
+    from saans.sources import OpenAqUnavailable
+    fc = _patch_chain(monkeypatch, {**_LIVE_CPCB, "source": "fixture"}, OpenAqUnavailable("x", "nearest CPCB monitor via OpenAQ last reported 50 h ago"))
+    _, src, _ = fc.load_forecast(_school())
+    assert src["note"] == "Not calibrated: CPCB (data.gov.in) unreachable; nearest CPCB monitor via OpenAQ last reported 50 h ago"
+    fc = _patch_chain(monkeypatch, RuntimeError("down"), RuntimeError("OPENAQ_API_KEY missing"))
+    assert fc.load_forecast(_school())[1]["note"] == "Not calibrated: CPCB (data.gov.in) unreachable; OpenAQ unavailable"
+    fc = _patch_chain(monkeypatch, _LIVE_CPCB, RuntimeError("unused"))
+    assert fc.load_forecast(_school())[1]["note"] is None
+
+
+def test_note_flows_into_dayplan() -> None:
+    from saans.planner import plan_day
+    from saans.store import SEED_SCHOOLS
+    rows = [{"time": "2026-10-09T09:00", "pm25": 50, "pm10": 60}]
+    p = plan_day(SEED_SCHOOLS[0], rows, "2026-10-09", {"forecast": "live", "observation": "none", "note": "Not calibrated: x"})
+    assert p.sources.note == "Not calibrated: x"

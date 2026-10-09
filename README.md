@@ -19,7 +19,7 @@ To create or replace a school, `POST` the `School` JSON returned by `/api/school
 
 ## Data sources
 
-CPCB via data.gov.in is preferred; when unreachable from AWS, Saans calibrates with CPCB station data via OpenAQ. The assistant is built with Strands Agents (AWS open source); Bedrock Nova Lite is supported, Gemini is used because our account's Bedrock access was blocked.
+CPCB via data.gov.in is preferred; when unreachable from AWS, Saans tries CPCB reference-monitor data via OpenAQ. Calibration is applied only when a station reading is under 2 hours old; otherwise the forecast is shown uncalibrated and the page says why (e.g. "nearest CPCB monitor via OpenAQ last reported 50 h ago"). The assistant is built with Strands Agents (AWS open source); Bedrock Nova Lite is supported, Gemini is used because our account's Bedrock access was blocked.
 
 - Forecast: Open-Meteo Air Quality API (hourly PM2.5/PM10).
 - Calibration chain: data.gov.in CPCB → OpenAQ v3 (nearest PM2.5 sensor ≤ 25 km, < 2 h old) → uncalibrated. `sources.observation` says which was used (e.g. `live:openaq`).

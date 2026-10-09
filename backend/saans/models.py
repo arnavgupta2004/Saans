@@ -14,7 +14,7 @@ class Swap(BaseModel):
 class PeriodPlan(BaseModel):
  period:Period; aqi:int; band:str; action:Action; sensitive_action:Action; swap:Swap|None=None
 class Sources(BaseModel):
- forecast:str; observation:str; station:str|None=None; distance_km:float|None=None
+ forecast:str; observation:str; station:str|None=None; distance_km:float|None=None; note:str|None=None
 class DayPlan(BaseModel):
  school_id:str; date:str; now:HourPoint|None=None; periods:list[PeriodPlan]; worst_hour:str; best_hour:str; sources:Sources; mode:Literal['live','cached','fixture','replay']; generated_at:str; replay_date:str|None=None
 class WeekPlan(BaseModel):
