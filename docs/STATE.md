@@ -12,11 +12,19 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T18 — `/notice?polish=true`
-- **Where:** `backend/app.py` `notice()` + `saans/agent.py`
-- **Done so far:** T09–T11, T17; /api/ask calls agent, falls back on error. 58 tests pass.
-- **Next concrete step:** polish=true: ask agent to rewrite template without changing numbers; regex-verify all numbers present, else return template. Then T12 SAM template (needs human AWS keys, T02).
-- **Commands:** `cd backend && .venv/bin/python -m pytest -q`
+- **Task:** T12 deploy (blocked on local tooling), then T21 Amplify.
+- **Done:** frontend wired to API (VITE_API_URL, default http://localhost:8000); `backend/template.yaml`, `backend/scripts/seed_dynamo.py` written. Not deployed: `aws` session expired and `docker` is not installed.
+- **Next (human):** `aws login` (or `aws configure`), install/start Docker Desktop, then from repo root:
+```
+cd backend
+sam build --use-container
+sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY
+.venv/bin/python scripts/seed_dynamo.py
+URL=$(aws cloudformation describe-stacks --stack-name saans --region us-east-1 --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
+curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
+```
+- Caveat: `CodeUri: .` also packages `backend/.venv`; if the build is slow, build from a copy without `.venv`.
+- Then record URL above, set `VITE_API_URL` in Amplify, do T21.
 
 ---
 
