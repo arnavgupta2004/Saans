@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Claude — Sat 10 Oct 2026, ~02:20 IST (judge/QA pass, final status)
+**Last updated:** Claude — Sat 10 Oct 2026, ~03:05 IST (hardening + smoke test)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com
 **Deployed frontend URL:** https://main.d6f34l6r9rpi9.amplifyapp.com (Amplify app d6f34l6r9rpi9, Git-connected, branch main)
@@ -27,6 +27,41 @@
 - [x] Screenshots: docs/img/*.png (live site, 375×812)
 - [ ] Rotate the Gemini / OpenAQ / data.gov.in keys after judging (they were pasted in chat)
 - [ ] Feature freeze respected (Sun 11 Oct 12:00 IST)
+
+### Smoke test (`scripts/smoke.sh`, after hardening deploy, Sat 10 Oct ~03:05 IST)
+```
+PASS  health                                                     200  0.96s
+PASS  schools list                                               200  0.77s
+PASS  delhi-anand-vihar today (live)                             200  2.78s
+PASS  delhi-anand-vihar today (replay)                           200  0.74s
+PASS  delhi-anand-vihar week                                     200  2.34s
+PASS  delhi-anand-vihar best-day 09:00-12:00                     200  1.79s
+PASS  delhi-anand-vihar notice EN                                200  2.39s
+PASS  delhi-anand-vihar notice HI (replay)                       200  0.79s
+PASS  delhi-dwarka today (live)                                  200  2.50s
+PASS  delhi-dwarka today (replay)                                200  1.71s
+PASS  delhi-dwarka week                                          200  2.20s
+PASS  delhi-dwarka best-day 09:00-12:00                          200  1.83s
+PASS  delhi-dwarka notice EN                                     200  1.42s
+PASS  delhi-dwarka notice HI (replay)                            200  0.86s
+PASS  bengaluru-indiranagar today (live)                         200  1.66s
+PASS  bengaluru-indiranagar today (replay)                       200  1.05s
+PASS  bengaluru-indiranagar week                                 200  1.19s
+PASS  bengaluru-indiranagar best-day 09:00-12:00                 200  1.56s
+PASS  bengaluru-indiranagar notice EN                            200  1.22s
+PASS  bengaluru-indiranagar notice HI (replay)                   200  0.97s
+PASS  replay swap: 7B PE <-> Period 8, 351 -> 127                200  1.06s
+PASS  ask (replay) answers                                       200  6.08s
+PASS  unknown school -> 404                                      404  0.99s
+PASS  unknown replay key -> 404 (no echo)                        404  0.82s
+PASS  question > 300 chars -> 422                                422  1.15s
+PASS  demo school is read-only -> 403                            403  0.83s
+PASS  CORS preflight from Amplify allowed                        200  0.99s
+PASS  CORS from unknown origin not allowed                       400  1.49s
+PASS  frontend loads                                             200  0.26s
+----
+29 passed, 0 failed
+```
 
 ### Known open items (honest)
 - Live calibration rarely visible: data.gov.in refuses AWS; OpenAQ CPCB feed ~50 h stale → app shows "Not calibrated" with the reason.
@@ -140,7 +175,7 @@
 - 2026-10-10 — Judge/QA pass (Claude, ~02:30 IST). Scores: Idea 8, AWS 7, Design 7, Execution 6, Video 6 (unrecorded). Fixed: (1) POST /api/schools returned 200 for demo ids → Setup "Save" overwrote the demo school for everyone; demo ids now 403, Setup saves as `custom-<slug>`. (2) `_in_period` counted the end hour for periods ending on the hour (09:20–10:00 used 10:00 air) → wrong period AQI + missed swaps (Dwarka 9B PE Severe, no swap). (3) best-day `band` came from whole-day PM2.5 only → "AQI 148 · Poor"; now band_for_aqi(max_aqi). (4) Lambda in-memory Open-Meteo cache set mode "cached" → false "prepared by the daily job" banner; now mode live (cached reserved for daily-job plans). (5) Replay banner says "recorded Delhi air". (6) README [CITE]s removed/reworded; "What runs on AWS" section. Also: tests wrote to committed data/schools.json — conftest now uses a temp copy (SCHOOLS_PATH). Open: live calibration rarely visible; LLM not on Bedrock; video not recorded.
 - 2026-10-10 — Submission assets (Claude): docs/assets/{architecture,title-card,end-card}.png (1920×1080; sources + generator in docs/assets/src, mermaid-cli 11.4.2 with ELK layout, run via Playwright Chromium — no extra browser download), docs/assets/demo.gif (375px, ~20 s, 2.5 MB; `node frontend/scripts/demo_gif.mjs`, needs ffmpeg), docs/SUBMISSION.md (copy-paste form text). README shows the GIF and architecture image.
 - 2026-10-10 — Impact estimate (Claude): School.students_per_class (default 40); Swap.impact per suggested swap = (mean PM2.5 original hours − new hours) × duration h × students; DayPlan.impact totals over NON-optional swaps; student-hours "out of Poor/Very Poor" only when new slot is better than Poor; /week adds per-day + weekly impact. UI copy says "Suggested swaps WOULD move…" (not "moved" — swaps are suggestions), labelled Estimate, formula in an expander; outdoor-only, infiltration not modelled. Replay day: 40 students, 40 min, 167.8→67.2 µg/m³ (60%), 2,684 µg/m³·h. PLAN §6 updated. Deployed (backend by agent, Amplify 99aed9d) and verified live ~02:45 IST: replay card text + formula correct; week totals Anand Vihar 1 swap, Dwarka 3 swaps / 80 student-hours, Bengaluru 0; no overflow at 375px.
-- 2026-10-10 — Hardening (Claude): HTTP API DefaultRouteSettings throttling burst 20 / rate 10 rps; CORS (API GW + FastAPI) only Amplify + localhost via `AllowedOrigins` param / ALLOWED_ORIGINS env; /api/ask question ≤ 300 chars (422), per-IP 10/min fixed window (saans/ratelimit.py: DynamoDB counter `rl#ask#<ip>#<window>` with `ttl`, TTL enabled on saans-cache; fails open), client IP = API GW sourceIp via Mangum; school ids `^[a-z0-9-]{1,64}$` (404), replay keys must be known (404, not echoed), POST /schools id format + ≤ 40 periods (422); JSON handlers: validation errors never echo input, unhandled errors → {"detail":"Internal error"}. UI: friendly 429/422 messages, 300-char counter. `scripts/smoke.sh` = post-deploy check.
+- 2026-10-10 — Hardening (Claude): HTTP API DefaultRouteSettings throttling burst 20 / rate 10 rps; CORS (API GW + FastAPI) only Amplify + localhost via `AllowedOrigins` param / ALLOWED_ORIGINS env; /api/ask question ≤ 300 chars (422), per-IP 10/min fixed window (saans/ratelimit.py: DynamoDB counter `rl#ask#<ip>#<window>` with `ttl`, TTL enabled on saans-cache; fails open), client IP = API GW sourceIp via Mangum; school ids `^[a-z0-9-]{1,64}$` (404), replay keys must be known (404, not echoed), POST /schools id format + ≤ 40 periods (422); JSON handlers: validation errors never echo input, unhandled errors → {"detail":"Internal error"}. UI: friendly 429/422 messages, 300-char counter. `scripts/smoke.sh` = post-deploy check. Deployed; note: SAM silently ignored `!Split` in HttpApi CorsConfiguration.AllowOrigins (stayed '*') → literal list in template. Live: API GW throttling burst 20/rate 10, CORS origins = Amplify + localhost; browser Ask from Amplify verified; smoke 29/29 PASS.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

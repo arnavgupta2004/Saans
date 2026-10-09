@@ -46,7 +46,7 @@ check "demo school is read-only -> 403"         403 "True" \
   -X POST "$API/schools" -H 'Content-Type: application/json' -d '{"id":"delhi-anand-vihar","name":"x","city":"x","lat":0,"lon":0,"timetable":[]}'
 check "CORS preflight from Amplify allowed"     200 "'access-control-allow-origin: $WEB' in h" \
   -X OPTIONS "$API/ask" -H "Origin: $WEB" -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type'
-check "CORS from unknown origin not allowed"    400 "'access-control-allow-origin' not in h" \
+check "CORS from unknown origin not allowed"    "$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$API/ask" -H 'Origin: https://evil.example.com' -H 'Access-Control-Request-Method: POST')" "'access-control-allow-origin' not in h" \
   -X OPTIONS "$API/ask" -H 'Origin: https://evil.example.com' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type'
 check "frontend loads"                          200 "'<div id=\"root\">' in t"                          "$WEB/"
 

@@ -89,7 +89,13 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       CorsConfiguration:
-        AllowOrigins: !Split [',', !Ref AllowedOrigins]
+        # Literal list: SAM drops intrinsic functions here (verified: !Split left AllowOrigins at '*').
+        # Keep in sync with the AllowedOrigins parameter, which FastAPI uses.
+        AllowOrigins:
+          - https://main.d6f34l6r9rpi9.amplifyapp.com
+          - http://localhost:5173
+          - http://localhost:4173
+          - http://localhost:8000
         AllowMethods: [GET, POST, OPTIONS]
         AllowHeaders: [content-type]
         MaxAge: 600
