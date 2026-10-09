@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 16:47 IST (T04 complete; T07 next)
+**Last updated:** Codex — Fri 9 Oct 2026, 16:51 IST (T07 complete)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,10 +12,10 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T07 — Deterministic school safety rules
-- **Where:** `backend/saans/rules.py`
-- **Done so far:** T04 implements CPCB PM2.5/PM10 breakpoints, capped sub-index interpolation, NAQI bands and metadata, plus boundary/invalid-input tests.
-- **Next concrete step:** implement the §3.3 action table for high/low outdoor activities and sensitive students.
+- **Task:** T05 — Sources and fixtures (next eligible task)
+- **Where:** `backend/saans/sources.py`
+- **Done so far:** T07 implements deterministic actions for every AQI-band/activity/sensitive-student protocol cell, with simple Hindi safety text.
+- **Next concrete step:** implement resilient Open-Meteo/CPCB clients and fixture-backed tests when data.gov.in credentials are available.
 - **Commands:** `cd backend && .venv/bin/python -m pytest -q`; `cd frontend && npm run build`
 
 ---
@@ -27,6 +27,7 @@
 | Fri 9 Oct 2026, 16:35 IST | Codex | unavailable — `backend/` absent | unavailable — `frontend/` absent |
 | Fri 9 Oct 2026, 16:42 IST | Codex | 1 passed | passed |
 | Fri 9 Oct 2026, 16:47 IST | Codex | 20 passed | passed |
+| Fri 9 Oct 2026, 16:51 IST | Codex | 41 passed | passed |
 
 ---
 
@@ -39,7 +40,7 @@
 | T04 | aqi.py + tests | Cursor | T03 | DONE | CPCB PM2.5/PM10 NAQI interpolation, metadata, caps, and invalid-input handling. Tests: 20 passed; frontend build passed. |
 | T05 | sources.py + fixtures + tests | Cursor | T03 | TODO | needs data.gov.in key for live recording |
 | T06 | calibrate.py + tests | Cursor | T04, T05 | TODO | |
-| T07 | rules.py + tests | Cursor | T04 | TODO | |
+| T07 | rules.py + tests | Cursor | T04 | DONE | Deterministic activity/sensitive-student protocol actions with simple Hindi text; every table cell tested. Tests: 41 passed; frontend build passed. |
 | T08 | models.py + store.py + seed schools | Cursor | T03 | TODO | |
 | T09 | planner.py + tests | Cursor | T06, T07, T08 | TODO | |
 | T10 | app.py endpoints | Cursor | T09 | TODO | |
@@ -77,3 +78,4 @@
 | Fri 16:00 | Claude → humans | Kit created. Start with T01–T03. |
 | Fri 16:42 | Codex → Codex | T03 complete. Begin T04 in `backend/saans/aqi.py`. |
 | Fri 16:47 | Codex → Codex | T04 complete. Begin T07 in `backend/saans/rules.py`. |
+| Fri 16:51 | Codex → next agent | T07 complete. Resume with T05 in `backend/saans/sources.py`. |
