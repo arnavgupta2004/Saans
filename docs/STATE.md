@@ -3,38 +3,34 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Claude — Fri 9 Oct 2026 (planner honesty + swap rule fixes)
+**Last updated:** Claude — Sat 10 Oct 2026, ~02:20 IST (judge/QA pass, final status)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com
 **Deployed frontend URL:** https://main.d6f34l6r9rpi9.amplifyapp.com (Amplify app d6f34l6r9rpi9, Git-connected, branch main)
-**Repo:** _(add GitHub URL)_
+**Repo:** https://github.com/arnavgupta2004/Saans (PRIVATE — make public before submitting)
 
 ---
 
 ## ▶ Resume here
-- **Task:** Redeploy with the "planner honesty + swap rule" fixes, re-seed DynamoDB (schools changed), then T21 Amplify. Commands:
-```
-cd backend
-sam build --use-container
-sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY ModelProvider=gemini GeminiModelId=gemini-3.8-flash GeminiApiKey=$GEMINI_API_KEY OpenAqApiKey=$OPENAQ_API_KEY
-AWS_DEFAULT_REGION=us-east-1 STORE=dynamo .venv/bin/python scripts/seed_dynamo.py saans-schools   # or ../.venv/bin/python
-```
-- Then Amplify (manual deploy): `cd frontend && VITE_API_URL=$URL npm run build && (cd dist && zip -r ../dist.zip .)`, upload `frontend/dist.zip` in Amplify → app → Deploy updates. Needed: capture real CPCB sample into `backend/fixtures/cpcb_live_sample.json` (item 2 unverified).
-- (older notes below)
-- **Done:** frontend wired to API (VITE_API_URL, default http://localhost:8000); `backend/template.yaml`, `backend/scripts/seed_dynamo.py` written. Not deployed: `aws` session expired and `docker` is not installed.
-- **Next (human):** `aws login` (or `aws configure`), install/start Docker Desktop, then from repo root:
-```
-cd backend
-sam build --use-container
-sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY
-.venv/bin/python scripts/seed_dynamo.py
-URL=$(aws cloudformation describe-stacks --stack-name saans --region us-east-1 --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
-curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
-```
-- Caveat: `CodeUri: .` also packages `backend/.venv`; if the build is slow, build from a copy without `.venv`.
-- Then record URL above, set `VITE_API_URL` in Amplify, do T21.
+**Final status (Claude, Sat 10 Oct 2026 ~02:20 IST):** feature-complete and deployed. Backend 167 tests, frontend tsc + build + 10 vitest pass. Live: /today (live + replay) for all 3 schools, week, best-day, notice EN/HI, Ask (gemini-3.5-flash-lite, verified), daily job, alarms → SNS email. Judge/QA pass fixes deployed (see Decisions 2026-10-10). Remaining work is human: video, blog, repo visibility, submission.
 
----
+### Submission checklist
+- [ ] **Repo public** — currently PRIVATE (`gh repo edit arnavgupta2004/Saans --visibility public --accept-visibility-change-consequences`). History scanned: no API keys or .env files committed.
+- [x] **Live app:** https://main.d6f34l6r9rpi9.amplifyapp.com (replay: `/?replay=delhi-nov`, Ask: `/?replay=delhi-nov&tab=ask`)
+- [x] **API:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com/api/health
+- [ ] **Demo video link:** `<VIDEO_URL>` — script in docs/VIDEO.md (3:00, captions, pre-recording checklist)
+- [ ] **AWS Builder Center blog link:** `<BLOG_URL>` — draft in docs/BLOG.md
+- [x] **Track:** 01 — Air ("School safety on bad days")
+- [x] **Team:** Chernobyl (Arnav Gupta — lead; Avishi) — [ ] Avishi accepted the team invite (team locks after submit)
+- [x] README for judges (cited problem, screenshots, architecture, AWS services, science, limitations)
+- [x] Screenshots: docs/img/*.png (live site, 375×812)
+- [ ] Rotate the Gemini / OpenAQ / data.gov.in keys after judging (they were pasted in chat)
+- [ ] Feature freeze respected (Sun 11 Oct 12:00 IST)
+
+### Known open items (honest)
+- Live calibration rarely visible: data.gov.in refuses AWS; OpenAQ CPCB feed ~50 h stale → app shows "Not calibrated" with the reason.
+- LLM is Gemini (Bedrock blocked on the account); Bedrock Nova Lite supported via `MODEL_PROVIDER=bedrock`.
+- Disk on the dev Mac was full (1–2 GB free) during this session; Docker (SAM build images) uses ~4 GB — prune if builds fail.
 
 ## Test status
 | When | Tool | Backend `pytest -q` | Frontend `npm run build` |
@@ -85,14 +81,14 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
 | T19 | Daily EventBridge job | Cursor | T12 | DONE (deployed + invoked OK 22:38 IST) | `DailyFunction` (jobs/daily.py) via EventBridge Scheduler `cron(0 6 * * ? *)` Asia/Kolkata → saans-cache `school_id#date` {rows, sources, plan, stored_at}. /today serves it as mode "cached" if < 3 h old (re-planned so `now` is current; generated_at = fetch time), else live; cache errors → live. |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
-| T21 | Amplify Hosting | Human + Any | T13 | TODO | |
+| T21 | Amplify Hosting | Human + Any | T13 | DONE | Git-connected app d6f34l6r9rpi9, branch main, auto-builds on push. |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
 | T23 | Resilience pass | Antigravity | T21 | DONE | backend/tests/test_resilience.py: Open-Meteo, CPCB/OpenAQ, Gemini down one at a time and all together → 200 with honest mode/source/note. Frontend: `modeBanner()` (replay/fixture/cached) + vitest; error screen has Retry (never blank); empty timetable message. |
 | T24 | UI polish | Antigravity | T13–T16 | DONE (Claude) | Calm stone/teal palette, Saans wordmark header (school picker + EN/हिंदी), Today: big AQI in band colour, 500+ beyond-scale line, one-line verdict, go/caution/indoors icons, outdoor cards only (indoor classes collapsed), swap cards (required sky, optional grey), banners, amber calibration note. Ask: chat, progress steps, typing dots, "Show plan summary now" after 8 s (client-side from /today), ✓ numbers checked, model name. Notice follows global language + replay. Week: honest chart. Deep links ?replay=delhi-nov&tab=ask&lang=hi&school=… |
 | T25 | README | Any | T21 | DONE (Claude) | Judge-facing README: cited problem (WHO 2018, Lancet Planet Health 2024, GRAP IV Nov 2024, Murthy 2020), [CITE] where unverified, screenshots, mermaid, AWS services, science, limitations, run/deploy, team. Also docs/BLOG.md (~950 words) and docs/VIDEO.md (3:00 shot list + checklist). |
 | T26 | Demo video | Human | T24 | TODO | |
 | T27 | AWS Builder Center blog | Human (+agent draft) | T25 | TODO | |
-| T28 | Final checklist | Human | all | TODO | |
+| T28 | Final checklist | Human | all | IN PROGRESS | See "Submission checklist" under Resume here. |
 | T29 | Submit | Human | T28 | TODO | |
 
 ---
