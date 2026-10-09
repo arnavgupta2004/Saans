@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Codex — Fri 9 Oct 2026, 16:51 IST (T07 complete)
+**Last updated:** Codex — Fri 9 Oct 2026, 17:03 IST (T05 complete; T06 next)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,7 +12,7 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T05 — Sources and fixtures (next eligible task)
+- **Task:** T06 — Forecast calibration
 - **Where:** `backend/saans/sources.py`
 - **Done so far:** T07 implements deterministic actions for every AQI-band/activity/sensitive-student protocol cell, with simple Hindi safety text.
 - **Next concrete step:** implement resilient Open-Meteo/CPCB clients and fixture-backed tests when data.gov.in credentials are available.
@@ -38,7 +38,7 @@
 | T02 | Keys: data.gov.in, AWS CLI/SAM, Bedrock Nova Lite access, $5 budget | Human | — | TODO | |
 | T03 | Scaffold repo | Any | — | DONE | FastAPI/Mangum health endpoint + test; Vite React TypeScript Tailwind placeholder; local `.venv` created. Tests: 1 passed; frontend build passed. |
 | T04 | aqi.py + tests | Cursor | T03 | DONE | CPCB PM2.5/PM10 NAQI interpolation, metadata, caps, and invalid-input handling. Tests: 20 passed; frontend build passed. |
-| T05 | sources.py + fixtures + tests | Cursor | T03 | TODO | needs data.gov.in key for live recording |
+| T05 | sources.py + fixtures + tests | Cursor | T03 | DONE (CPCB live unverified) | Open-Meteo response verified (`hourly.time`, `pm2_5`, `pm10`); client/cache/fallback and fixtures added. Tests: 43 passed. |
 | T06 | calibrate.py + tests | Cursor | T04, T05 | TODO | |
 | T07 | rules.py + tests | Cursor | T04 | DONE | Deterministic activity/sensitive-student protocol actions with simple Hindi text; every table cell tested. Tests: 41 passed; frontend build passed. |
 | T08 | models.py + store.py + seed schools | Cursor | T03 | TODO | |
@@ -70,7 +70,7 @@
 - 2026-10-09 — Track 01 Air, sub-problem "School safety on bad days". Product: Saans. Stack per AGENTS.md §2. (Claude)
 
 ## Known issues / surprises
-- _(none yet)_
+- T05: Open-Meteo live schema and three location forecasts verified. data.gov.in resource `3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69` could not be reached from this environment and no private API key was present, so CPCB uses a clearly labelled documented-shape fixture; live parser remains unverified.
 
 ## Handoff history (append only)
 | Time (IST) | From → To | Summary |
