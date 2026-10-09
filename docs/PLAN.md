@@ -182,14 +182,17 @@ Suggested tool split (either tool can do any task; this is just the default):
 ```text
 Period:      id, label, start "HH:MM", end "HH:MM", type: assembly|pe|recess|sports|class,
              intensity: high|low, outdoor: bool, swappable: bool, grade?: str
-School:      id, name, city, lat, lon, timetable: [Period], sensitive_count: int, languages: ["en","hi"]
+School:      id, name, city, lat, lon, timetable: [Period], sensitive_count: int, students_per_class: int = 40, languages: ["en","hi"]
 HourPoint:   time ISO, pm25, pm10, pm25_cal, pm10_cal, aqi, band, calibrated: bool
 Action:      level: go|caution|indoors, text_en, text_hi, rule_id
-Swap:        to_start, to_end, to_aqi, to_band, gain_bands: int
+Swap:        to_start, to_end, to_aqi, to_band, gain_bands: int, optional: bool, with_period_id?, with_label?,
+             impact?: {pm25_before, pm25_after, reduction_pct, minutes, students, exposure_avoided, band_from, band_to}
 PeriodPlan:  period: Period, aqi, band, action: Action, sensitive_action: Action, swap?: Swap
 DayPlan:     school_id, date, now: HourPoint?, periods: [PeriodPlan], worst_hour, best_hour,
              sources: {forecast, observation, station?, distance_km?}, mode: live|cached|fixture|replay,
-             generated_at
+             generated_at, replay_date?, impact: {swaps, students_moved, minutes, student_hours_out_of_poor,
+             exposure_avoided, reduction_pct, worst_band_from?}
+Week (GET /week): days[] each + impact; impact (weekly totals + days_with_swaps)
 ```
 
 ### Endpoints

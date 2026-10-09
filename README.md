@@ -114,10 +114,21 @@ Indoor classes always get "no change needed". A period with no forecast data is 
 ### 4. Exchange swaps
 Only outdoor periods marked swappable can move, and only by **exchanging** with an indoor, swappable class period the same day (08:00–15:00) whose hours give the activity a better action. Greedy, worst period first, each target used once. `indoors` → target must give go/caution; `caution` → target must give go (shown as an optional "better slot"). The parent notice *offers* swaps ("Hold PE indoors, or move it to 13:40"); it never announces them as done.
 
-### 5. Number guard
+### 5. Impact estimate (labelled "estimate" in the app)
+For each **suggested** swap (optional "better slot" hints are not counted), Saans estimates the outdoor PM2.5 exposure the class would avoid if the swap is applied:
+
+```
+exposure avoided = (mean PM2.5 at the original hours − mean PM2.5 at the new hours) × duration (h) × students in the class
+```
+- `students_per_class` is a school setting (default 40).
+- **Student-hours out of Poor/Very Poor air** counts a swap only when the original period is Poor or worse *and* the new slot is better than Poor.
+- Today shows one sentence, e.g. *"Suggested swaps would move 40 students out of Very Poor air for 40 min (≈ 60% lower PM2.5 during PE)"* — the recorded Delhi day: 167.8 → 67.2 µg/m³ × 0.67 h × 40 = 2,684 µg/m³·h. The formula with the actual numbers is one tap away. Week shows the weekly total.
+- **Limits:** it uses the outdoor forecast only. Indoor air during the swapped indoor class, infiltration, ventilation and breathing rate during exercise are **not modelled**; it is an indicator of relative change, not a dose. It assumes the swap is applied.
+
+### 6. Number guard
 The LLM never decides safety. After the agent answers, every number ≥ 20 in the answer must appear in that request's tool outputs, the question, or the school profile. If not, the API logs a warning and returns the deterministic plan summary instead. The UI shows "✓ numbers checked" only when the check passed.
 
-### 6. Model fallback chain
+### 7. Model fallback chain
 Primary `gemini-3.5-flash-lite` → fallback `gemini-3.1-flash-lite` → deterministic plan summary. Retries on 503/429/timeouts with 0.5 s / 1.5 s backoff, only while the 24 s budget still leaves room for the next model; each call has a 10 s deadline (Gemini's minimum). The response names the model that answered.
 
 ## Honest limitations
@@ -126,6 +137,7 @@ Primary `gemini-3.5-flash-lite` → fallback `gemini-3.1-flash-lite` → determi
 - **Forecast uncertainty.** Saans relies on a global model forecast (CAMS via Open-Meteo); we did not find a published Delhi-specific validation of its hourly PM2.5, so treat hourly values as guidance. Calibration helps only when a fresh reference reading exists.
 - **Stale reference data.** From AWS, data.gov.in refuses connections, and during our build OpenAQ's CPCB feed was ~50 h behind, so the live app is often **uncalibrated** — and labels itself so.
 - **Bedrock was blocked on our account,** so the live demo uses Gemini through the same Strands agent. Bedrock Nova Lite remains supported (`MODEL_PROVIDER=bedrock`).
+- **The impact estimate is outdoor-only** (indoor infiltration and exercise breathing rate not modelled) and assumes suggested swaps are applied.
 - **School thresholds are a design, not a medical guideline.** Swaps are suggestions; the principal decides.
 - Demo schools and timetables are seeded examples and are **read-only** on the public API (Setup saves a new school instead), so the demo cannot be overwritten.
 - Live calibration is rarely visible right now (data.gov.in blocks AWS; OpenAQ's CPCB feed is stale). The calibration maths is covered by unit tests (`backend/tests/test_calibrate.py`).

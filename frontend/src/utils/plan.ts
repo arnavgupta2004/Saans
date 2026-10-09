@@ -52,3 +52,31 @@ export function planSummary(plan: DayPlan, lang: Lang): string {
   }
   return lines.join('\n');
 }
+
+/** "Suggested swaps would move 40 students out of Very Poor air for 40 min (≈ 60% lower PM2.5 during PE)" — or null. */
+export function impactText(plan: Pick<DayPlan, 'periods' | 'impact'>, lang: Lang): string | null {
+  const im = plan.impact;
+  if (!im || im.swaps === 0) return null;
+  const moved = plan.periods.filter((p) => p.swap && !p.swap.optional);
+  const allPe = moved.every((p) => p.period.type === 'pe');
+  const outOf = im.student_hours_out_of_poor > 0 && im.worst_band_from;
+  if (lang === 'hi') {
+    const what = allPe ? 'PE के दौरान' : 'बदले गए पीरियड में';
+    const move = outOf ? `${bandLabel(im.worst_band_from!, lang)} हवा से हटाएँगे` : 'साफ़ हवा में ले जाएँगे';
+    return `सुझाए गए बदलाव ${im.students_moved} विद्यार्थियों को ${im.minutes} मिनट के लिए ${move} (${what} PM2.5 ≈ ${im.reduction_pct}% कम)`;
+  }
+  const what = allPe ? 'during PE' : 'during the moved periods';
+  const where = outOf ? `out of ${im.worst_band_from} air` : 'to cleaner air';
+  return `Suggested swaps would move ${im.students_moved} students ${where} for ${im.minutes} min (≈ ${im.reduction_pct}% lower PM2.5 ${what})`;
+}
+
+/** Plain-language formula for each counted swap, for the "How is this estimated?" expander. */
+export function impactFormula(plan: Pick<DayPlan, 'periods'>): string[] {
+  return plan.periods
+    .filter((p) => p.swap && !p.swap.optional && p.swap.impact)
+    .map((p) => {
+      const i = p.swap!.impact!;
+      const h = (i.minutes / 60).toFixed(2);
+      return `${p.period.label}: (${i.pm25_before} − ${i.pm25_after}) µg/m³ × ${h} h × ${i.students} students = ${Math.round(i.exposure_avoided).toLocaleString('en-IN')} µg/m³·h`;
+    });
+}

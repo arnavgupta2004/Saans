@@ -22,6 +22,7 @@ export interface School {
   lon: number;
   timetable: Period[];
   sensitive_count: number;
+  students_per_class?: number;
   languages: string[];
 }
 
@@ -43,6 +44,29 @@ export interface Action {
   rule_id: string;
 }
 
+/** Estimated outdoor PM2.5 exposure avoided if a swap is applied (indoor infiltration not modelled). */
+export interface SwapImpact {
+  pm25_before: number;
+  pm25_after: number;
+  reduction_pct: number;
+  minutes: number;
+  students: number;
+  exposure_avoided: number;
+  band_from: string;
+  band_to: string;
+}
+
+/** Totals over suggested (non-optional) swaps — an estimate, not a measurement. */
+export interface DayImpact {
+  swaps: number;
+  students_moved: number;
+  minutes: number;
+  student_hours_out_of_poor: number;
+  exposure_avoided: number;
+  reduction_pct: number;
+  worst_band_from?: string | null;
+}
+
 export interface Swap {
   to_start: string;
   to_end: string;
@@ -54,6 +78,7 @@ export interface Swap {
   /** the indoor class period this outdoor period exchanges slots with */
   with_period_id?: string | null;
   with_label?: string | null;
+  impact?: SwapImpact | null;
 }
 
 export interface PeriodPlan {
@@ -85,6 +110,7 @@ export interface DayPlan {
   mode: 'live' | 'cached' | 'fixture' | 'replay';
   generated_at: string;
   replay_date?: string | null;
+  impact?: DayImpact;
 }
 
 /** GET /api/schools/{id}/week — planner owns AQI/band fields */
@@ -94,11 +120,13 @@ export interface WeekDaySummary {
   worst_band: string;
   best_hour: string;
   worst_hour: string;
+  impact?: DayImpact;
 }
 
 export interface WeekPlan {
   days: WeekDaySummary[];
   hourly: HourPoint[];
+  impact?: DayImpact & { days_with_swaps: number };
 }
 
 /** GET /api/schools/{id}/best-day — ranking is produced by planner.best_day */

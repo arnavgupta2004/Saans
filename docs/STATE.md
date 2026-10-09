@@ -55,6 +55,7 @@
 | Fri 9 Oct 2026 (replay tool dates) | Claude | 151 passed | — |
 | Sat 10 Oct 2026 (null hours / no-data) | Claude | 155 passed | — |
 | Sat 10 Oct 2026 (QA pass) | Claude | 167 passed | passed (+ vitest 10) |
+| Sat 10 Oct 2026 (impact) | Claude | 174 passed | passed (+ vitest 14) |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -138,6 +139,7 @@
 - 2026-10-10 — Docs (Claude): two claims left as [CITE] — "children breathe faster" (in WHO press material, not on the report page) and a Delhi-specific CAMS bias figure (none found). Humans: verify or remove before submitting.
 - 2026-10-10 — Judge/QA pass (Claude, ~02:30 IST). Scores: Idea 8, AWS 7, Design 7, Execution 6, Video 6 (unrecorded). Fixed: (1) POST /api/schools returned 200 for demo ids → Setup "Save" overwrote the demo school for everyone; demo ids now 403, Setup saves as `custom-<slug>`. (2) `_in_period` counted the end hour for periods ending on the hour (09:20–10:00 used 10:00 air) → wrong period AQI + missed swaps (Dwarka 9B PE Severe, no swap). (3) best-day `band` came from whole-day PM2.5 only → "AQI 148 · Poor"; now band_for_aqi(max_aqi). (4) Lambda in-memory Open-Meteo cache set mode "cached" → false "prepared by the daily job" banner; now mode live (cached reserved for daily-job plans). (5) Replay banner says "recorded Delhi air". (6) README [CITE]s removed/reworded; "What runs on AWS" section. Also: tests wrote to committed data/schools.json — conftest now uses a temp copy (SCHOOLS_PATH). Open: live calibration rarely visible; LLM not on Bedrock; video not recorded.
 - 2026-10-10 — Submission assets (Claude): docs/assets/{architecture,title-card,end-card}.png (1920×1080; sources + generator in docs/assets/src, mermaid-cli 11.4.2 with ELK layout, run via Playwright Chromium — no extra browser download), docs/assets/demo.gif (375px, ~20 s, 2.5 MB; `node frontend/scripts/demo_gif.mjs`, needs ffmpeg), docs/SUBMISSION.md (copy-paste form text). README shows the GIF and architecture image.
+- 2026-10-10 — Impact estimate (Claude): School.students_per_class (default 40); Swap.impact per suggested swap = (mean PM2.5 original hours − new hours) × duration h × students; DayPlan.impact totals over NON-optional swaps; student-hours "out of Poor/Very Poor" only when new slot is better than Poor; /week adds per-day + weekly impact. UI copy says "Suggested swaps WOULD move…" (not "moved" — swaps are suggestions), labelled Estimate, formula in an expander; outdoor-only, infiltration not modelled. Replay day: 40 students, 40 min, 167.8→67.2 µg/m³ (60%), 2,684 µg/m³·h. PLAN §6 updated.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

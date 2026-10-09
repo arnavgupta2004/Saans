@@ -3,9 +3,9 @@ import { getDayPlan, REPLAY_KEY } from './api';
 import { DayPlan, PeriodPlan } from './types';
 import { getBandTextColor, getBandColor } from './utils/colors';
 import { modeBanner, BANNER_STYLE, prettyDate } from './utils/banner';
-import { aqiDisplay, bandLabel, outdoorPeriods, swapText, verdict } from './utils/plan';
+import { aqiDisplay, bandLabel, impactFormula, impactText, outdoorPeriods, swapText, verdict } from './utils/plan';
 import { useLanguage, TKey } from './LanguageContext';
-import { CheckCircle2, AlertTriangle, Home, ArrowLeftRight, HeartPulse, Info, Clock, BookOpen } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Home, ArrowLeftRight, HeartPulse, Info, Clock, BookOpen, Sprout } from 'lucide-react';
 
 const LEVEL = {
   go: { icon: CheckCircle2, ring: 'text-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-900' },
@@ -105,6 +105,7 @@ export default function TodayView({
   const outdoor = outdoorPeriods(plan);
   const indoorCount = plan.periods.length - outdoor.length;
   const shown = now ? aqiDisplay(now) : null;
+  const impact = impactText(plan, lang);
 
   return (
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
@@ -141,6 +142,29 @@ export default function TodayView({
           </div>
         )}
       </section>
+
+      {/* Impact estimate (only when a suggested swap exists) */}
+      {impact && (
+        <section className="px-4 mt-3">
+          <div data-testid="impact-card" className="bg-emerald-50/70 border border-emerald-200/70 rounded-2xl px-4 py-3">
+            <div className="flex items-start gap-2.5">
+              <Sprout className="w-5 h-5 mt-0.5 shrink-0 text-emerald-700" />
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide font-semibold text-emerald-800">{lang === 'hi' ? 'अनुमान' : 'Estimate'}</p>
+                <p className="text-sm text-emerald-950 leading-snug">{impact}</p>
+                <details className="mt-1.5 text-xs text-stone-600">
+                  <summary className="cursor-pointer text-emerald-800 font-medium">{lang === 'hi' ? 'यह कैसे गिना गया?' : 'How is this estimated?'}</summary>
+                  <p className="mt-1.5">Exposure avoided = (mean PM2.5 at the original hours − at the new hours) × duration × students in the class.</p>
+                  <ul className="mt-1 space-y-0.5 font-mono text-[11px] break-words">
+                    {impactFormula(plan).map((f) => <li key={f}>{f}</li>)}
+                  </ul>
+                  <p className="mt-1.5">Outdoor forecast air only — indoor air and infiltration are not modelled. Counts suggested swaps only, as if they are applied.</p>
+                </details>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Outdoor activities */}
       <section className="px-4 mt-4 space-y-3">

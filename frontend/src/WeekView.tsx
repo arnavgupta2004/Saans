@@ -76,6 +76,22 @@ export default function WeekView({ activeSchoolId = 'delhi-anand-vihar' }: { act
           </div>
         </section>
 
+        {weekData.impact && (
+          <section data-testid="week-impact" className="bg-emerald-50/70 border border-emerald-200/70 rounded-2xl px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide font-semibold text-emerald-800">{lang === 'hi' ? 'इस सप्ताह · अनुमान' : 'This week · estimate'}</p>
+            {weekData.impact.swaps > 0 ? (
+              <p className="text-sm text-emerald-950 leading-snug mt-0.5">
+                {lang === 'hi'
+                  ? `${weekData.impact.days_with_swaps} दिनों में ${weekData.impact.swaps} सुझाए गए बदलाव · ${Math.round(weekData.impact.student_hours_out_of_poor)} विद्यार्थी-घंटे खराब/बहुत खराब हवा से बाहर · ${Math.round(weekData.impact.exposure_avoided).toLocaleString('en-IN')} µg/m³·h PM2.5 कम`
+                  : `${weekData.impact.swaps} suggested ${weekData.impact.swaps === 1 ? 'swap' : 'swaps'} on ${weekData.impact.days_with_swaps} ${weekData.impact.days_with_swaps === 1 ? 'day' : 'days'} · ${Math.round(weekData.impact.student_hours_out_of_poor)} student-hours out of Poor/Very Poor air · ${Math.round(weekData.impact.exposure_avoided).toLocaleString('en-IN')} µg/m³·h of PM2.5 exposure avoided`}
+              </p>
+            ) : (
+              <p className="text-sm text-emerald-950 mt-0.5">{lang === 'hi' ? 'इन दिनों में कोई बदलाव ज़रूरी नहीं।' : 'No swaps needed on the forecast days.'}</p>
+            )}
+            <p className="text-[11px] text-stone-500 mt-1">{lang === 'hi' ? 'केवल बाहरी हवा; अंदर की हवा का मॉडल नहीं।' : 'Outdoor air only; indoor air not modelled. Sum of daily estimates for suggested swaps.'}</p>
+          </section>
+        )}
+
         <section className="bg-white p-4 rounded-2xl border border-stone-200/80">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">{t('hourlyPm25Days')}</h2>
           <div className="h-52 w-full">
