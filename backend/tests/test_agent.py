@@ -16,12 +16,30 @@ def test_tool_shapes(monkeypatch) -> None:
 def test_model_provider_gemini(monkeypatch) -> None:
     from strands.models.gemini import GeminiModel
     monkeypatch.setenv("MODEL_PROVIDER", "gemini"); monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-    assert isinstance(agent._model(), GeminiModel)
+    monkeypatch.setenv("GEMINI_MODEL_ID", "some-gemini-id")
+    m = agent._model()
+    assert isinstance(m, GeminiModel) and m.config["model_id"] == "some-gemini-id"
+
+
+def test_gemini_model_id_must_come_from_env(monkeypatch) -> None:
+    import pytest
+    monkeypatch.setenv("MODEL_PROVIDER", "gemini"); monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.delenv("GEMINI_MODEL_ID", raising=False)
+    with pytest.raises(RuntimeError, match="GEMINI_MODEL_ID"):
+        agent._model()
+
+
+def test_no_hard_coded_gemini_model_names() -> None:
+    import re
+    from pathlib import Path
+    src = Path(agent.__file__).read_text()
+    assert not re.search(r"gemini-\d", src)
 
 
 def test_model_provider_defaults_to_bedrock(monkeypatch) -> None:
     from strands.models import BedrockModel
     monkeypatch.delenv("MODEL_PROVIDER", raising=False)
+    monkeypatch.setenv("BEDROCK_MODEL_ID", "some-bedrock-id")
     for k in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"): monkeypatch.setenv(k, "x")
     monkeypatch.delenv("AWS_PROFILE", raising=False)
     assert isinstance(agent._model(), BedrockModel)

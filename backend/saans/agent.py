@@ -65,15 +65,20 @@ def DayPlanAdapter(school_id: str, date: str):
 TOOLS = [get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice]
 
 
+def _env(name: str) -> str:
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(f"{name} is not set (configure it via the SAM template parameters)")
+    return value
+
+
 def _model():
-    """Bedrock Nova Lite by default; MODEL_PROVIDER=gemini uses Strands' Gemini provider (GEMINI_API_KEY)."""
+    """Bedrock by default; MODEL_PROVIDER=gemini uses Strands' Gemini provider. Model ids come only from env (SAM params)."""
     if os.getenv("MODEL_PROVIDER", "bedrock").lower() == "gemini":
         from strands.models.gemini import GeminiModel
-        return GeminiModel(client_args={"api_key": os.environ["GEMINI_API_KEY"]},
-                           model_id=os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash"))
+        return GeminiModel(client_args={"api_key": _env("GEMINI_API_KEY")}, model_id=_env("GEMINI_MODEL_ID"))
     from strands.models import BedrockModel
-    return BedrockModel(model_id=os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0"),
-                        region_name=os.getenv("AWS_REGION", "us-east-1"))
+    return BedrockModel(model_id=_env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
 
 
 def ask(school_id: str, question: str, lang: str = "en") -> dict:
