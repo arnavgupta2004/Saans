@@ -6,7 +6,7 @@
 **Last updated:** Claude — Fri 9 Oct 2026 (planner honesty + swap rule fixes)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com
-**Deployed frontend URL:** _(none yet)_
+**Deployed frontend URL:** https://main.d6f34l6r9rpi9.amplifyapp.com (Amplify app d6f34l6r9rpi9, Git-connected, branch main)
 **Repo:** _(add GitHub URL)_
 
 ---
@@ -110,6 +110,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Calibration honesty (Claude): probe showed OpenAQ code is correct but its CPCB feed is ~50 h behind (newest 2026-10-07 20:00 IST) and data.gov.in refuses AWS → no fresh reading, so live is uncalibrated. Decision: keep the 2 h freshness rule (a 2-day-old reading must not correct today's hourly forecast). Added `sources.note` (e.g. "Not calibrated: CPCB (data.gov.in) unreachable; nearest CPCB monitor via OpenAQ last reported 50 h ago"), shown in the Today footer; README wording fixed. Possible later: non-AWS fetcher for data.gov.in → saans-cache, or WAQI (needs AQI→concentration conversion).
 - 2026-10-09 — Live verification #2 (Claude, ~22:00 IST): /today = live, uncalibrated, station null, note "Not calibrated: CPCB (data.gov.in) unreachable; nearest CPCB monitor via OpenAQ last reported 50 h ago". Pending: re-check POST /api/ask (20 s budget) and upload new frontend to Amplify.
 - 2026-10-09 — rules.py text fix (Claude): Very Poor non-assembly activities said "use the PA system or classroom for assembly" (seen in live Ask fallback for PE). Now PA text only for assembly; others "Hold <activity> indoors." Levels/rule_ids unchanged. Live Ask (replay) returned fallback — cause (timeout vs number guard) to be read from CloudWatch. Amplify app `d6f34l6r9rpi9` is Git-connected (auto-builds on push; no manual upload).
+- 2026-10-09 — Amplify (Claude): Git-connected app builds on every push (job 20 SUCCEED). Branch had no env vars, so `frontend/.env.production` now sets public `VITE_API_URL`. Live Ask fallback cause: Gemini 503 "high demand" (transient); deterministic fallback worked.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
