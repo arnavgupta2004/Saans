@@ -1,0 +1,37 @@
+---
+config:
+  layout: elk
+---
+flowchart LR
+  P["Principal<br/>phone browser"]
+  subgraph AWS["AWS account · one SAM template"]
+    direction LR
+    AMP["AWS Amplify Hosting<br/>React app"] -->|HTTPS| APIGW["Amazon API Gateway<br/>HTTP API"]
+    APIGW --> API["AWS Lambda<br/>ApiFunction · FastAPI"]
+    SCH["Amazon EventBridge Scheduler<br/>06:00 Asia/Kolkata"] --> DAILY["AWS Lambda<br/>DailyFunction"]
+    API --> PLAN["Planner + rules.py<br/>rules decide"]
+    DAILY --> PLAN
+    API --> AG["Strands Agents<br/>AI explains · numbers checked"]
+    AG --> PLAN
+    PLAN <--> DDB[("Amazon DynamoDB<br/>schools · daily plans")]
+    API -.->|errors| CW["Amazon CloudWatch<br/>alarms"] --> SNS["Amazon SNS<br/>email alert"]
+  end
+  subgraph EXT["Outside AWS"]
+    direction TB
+    LLM["LLM · Gemini flash-lite<br/>Bedrock Nova Lite supported"]
+    OM["Open-Meteo Air Quality<br/>hourly PM2.5 / PM10 forecast"]
+    CAL["Calibration · fresh readings only<br/>CPCB data.gov.in → OpenAQ monitors"]
+  end
+  P --> AMP
+  AG --> LLM
+  PLAN --> OM
+  PLAN --> CAL
+
+  classDef aws fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#1C1917;
+  classDef core fill:#F0FDFA,stroke:#0F766E,stroke-width:2px,color:#1C1917;
+  classDef ext fill:#FFFFFF,stroke:#A8A29E,stroke-width:1.5px,color:#44403C;
+  class AMP,APIGW,API,DDB,SCH,DAILY,CW,SNS aws;
+  class PLAN,AG core;
+  class P,LLM,OM,CAL ext;
+  style EXT fill:#FFFFFF,stroke:#E7E5E4,stroke-width:2px,color:#78716C
+  style AWS fill:#FAFAF9,stroke:#D6D3D1,stroke-width:2px,stroke-dasharray:6 4,color:#57534E
