@@ -89,6 +89,15 @@ export const askSaans = async (schoolId: string, question: string, lang: 'en' | 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ school_id: schoolId, question, lang, ...(replay ? { replay } : {}) }),
   });
-  if (!response.ok) throw new Error('Failed to ask Saans');
+  if (!response.ok) throw new AskError(response.status);
   return response.json();
 };
+
+/** Ask failure with the HTTP status, so the UI can explain rate limits (429) and too-long questions (422). */
+export class AskError extends Error {
+  constructor(public status: number) {
+    super(`Ask failed (${status})`);
+  }
+}
+
+export const MAX_QUESTION = 300;

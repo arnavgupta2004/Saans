@@ -11,3 +11,6 @@ def _isolated_plan_cache(monkeypatch, tmp_path):
     seed = Path(__file__).resolve().parents[1] / "data" / "schools.json"
     shutil.copy(seed, tmp_path / "schools.json")
     monkeypatch.setenv("SCHOOLS_PATH", str(tmp_path / "schools.json"))
+    # Each test starts with an empty /api/ask rate-limit window.
+    import app as api
+    api.RATE_LIMITER.reset()

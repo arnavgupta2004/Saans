@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { askSaans, AskResponse, getDayPlan, REPLAY_KEY } from './api';
+import { askSaans, AskError, AskResponse, getDayPlan, MAX_QUESTION, REPLAY_KEY } from './api';
 import { useLanguage } from './LanguageContext';
 import { planSummary } from './utils/plan';
 import { Send, CheckCircle2, Info } from 'lucide-react';
@@ -48,8 +48,15 @@ export default function AskView({ activeSchoolId, replay }: { activeSchoolId: st
     try {
       const answer = await askSaans(activeSchoolId, q.trim(), lang, replay ? REPLAY_KEY : undefined, ctrl.signal);
       if (!ctrl.signal.aborted) finish({ answer });
-    } catch {
-      if (!ctrl.signal.aborted) finish({ error: lang === 'hi' ? 'Saans तक नहीं पहुँच सके। कृपया आज की योजना देखें।' : 'Could not reach Saans. Please use the Today plan.' });
+    } catch (e) {
+      if (ctrl.signal.aborted) return;
+      const status = e instanceof AskError ? e.status : 0;
+      const hi = lang === 'hi';
+      const msg =
+        status === 429 ? (hi ? 'एक मिनट में बहुत सारे सवाल। कृपया एक मिनट रुककर फिर पूछें।' : 'Lots of questions from your network in the last minute. Please wait a minute and ask again.')
+        : status === 422 ? (hi ? `सवाल ${MAX_QUESTION} अक्षरों से छोटा रखें।` : `Please keep the question under ${MAX_QUESTION} characters.`)
+        : (hi ? 'Saans तक नहीं पहुँच सके। कृपया आज की योजना देखें।' : 'Could not reach Saans. Please use the Today plan.');
+      finish({ error: msg });
     }
   };
 
@@ -126,9 +133,13 @@ export default function AskView({ activeSchoolId, replay }: { activeSchoolId: st
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+          maxLength={MAX_QUESTION}
           placeholder={t('askPlaceholder')}
           className="flex-1 min-w-0 border border-stone-300 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:border-teal-500"
         />
+        {question.length > MAX_QUESTION - 50 && (
+          <span className="self-center text-[11px] text-stone-500 tabular-nums shrink-0">{question.length}/{MAX_QUESTION}</span>
+        )}
         <button disabled={pending || !question.trim()} className="bg-teal-700 text-white rounded-xl px-3.5 disabled:opacity-40" aria-label="Ask">
           <Send className="w-4 h-4" />
         </button>
