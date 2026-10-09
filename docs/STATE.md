@@ -55,6 +55,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (T19) | Claude | 138 passed | passed |
 | Fri 9 Oct 2026 (T23) | Claude | 144 passed | passed (+ vitest 4 passed) |
 | Fri 9 Oct 2026 (attempt timeout) | Claude | 148 passed | — |
+| Fri 9 Oct 2026 (replay tool dates) | Claude | 151 passed | — |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -122,6 +123,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Deploy verification #3 (Claude, 22:35–22:40 IST, after human deploy of 8d7f728): live /today OK (live, uncalibrated, note "…51 h ago"); replay OK (PE "Hold PE indoors." ⇄ Period 8 13:40, 351→127); daily job invoke OK (3 stored, 0 failed) → /today mode "cached"; Amplify index + bundle reference qcx2qrt6bj API, no localhost. Ask ×2 = timed_out fallback: Gemini took ~18 s to return 503 / hung, so retries + fallback model never ran.
 - 2026-10-09 — Gemini per-attempt timeout (Claude): `GEMINI_ATTEMPT_TIMEOUT_S` (6 s, template env) → genai `http_options.timeout`; retry only if remaining budget covers retry + one attempt per later model; start an attempt only if one fits. NEEDS REDEPLOY.
 - 2026-10-09 — Gemini deadline fix (Claude): live Ask after 11f8b98 returned the plan summary in 1.7–8 s because Gemini rejects request deadlines < 10 s (400 INVALID_ARGUMENT "Minimum allowed deadline is 10s"). Per-attempt timeout now floored at 10 s (`GEMINI_ATTEMPT_TIMEOUT_S` 10); `AGENT_TIMEOUT_S` 20 → 24 so primary (≤10 s) + fallback model (≤10 s) fit under API Gateway's 30 s. NEEDS REDEPLOY.
+- 2026-10-09 — Live Ask after f48f9af (Claude, 23:09 IST): #1 primary gemini-3.8-flash failed (~18 s, overloaded) → 6 s left → plan summary at 22 s (as designed); #2 answered by fallback gemini-3.5-flash-lite in 14 s but said it "cannot retrieve plan data" — model passed the replay key as `date`. Fix: replay tools ignore `date`; live tools return {"error": "...Available dates: ..."} for unknown dates instead of raising; replay prompt context names the recorded date (2025-11-19), not the key. NEEDS REDEPLOY.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

@@ -231,3 +231,31 @@ def test_skip_attempt_when_not_enough_time_left(monkeypatch) -> None:
     with pytest.raises(_Fake503):
         agent._run_agent([], "q", deadline=time.monotonic() + 5)  # < 1 attempt left for lite: don't start it
     assert calls == ["primary"]
+
+
+def test_replay_tools_ignore_model_supplied_date() -> None:
+    t = {f.__name__: f for f in agent.make_tools(replay="delhi-nov")}
+    for bad in ("delhi-nov", "2026-10-09", "today"):
+        plan = t["get_day_plan"](SID, bad)
+        assert plan["replay_date"] == "2025-11-19" and plan["periods"]
+        assert t["get_hourly_forecast"](SID, bad)[0]["time"].startswith("2025-11-19")
+    assert "whatsapp_url" in t["draft_notice"](SID, "delhi-nov")
+
+
+def test_live_tool_bad_date_returns_error_not_crash(monkeypatch) -> None:
+    rows = [{"time": f"2026-10-09T{h:02d}:00", "pm25": 50, "pm10": 60} for h in range(24)]
+    monkeypatch.setattr(agent, "_forecast", lambda s, replay=None: (rows, {"forecast": "live", "observation": "none"}))
+    t = {f.__name__: f for f in agent.make_tools()}
+    r = t["get_day_plan"](SID, "2030-01-01")
+    assert "error" in r and "2026-10-09" in r["error"]
+    assert "error" in t["get_hourly_forecast"](SID, "nonsense")[0]
+
+
+def test_replay_prompt_context_names_recorded_date(monkeypatch) -> None:
+    seen = {}
+    def fake(tools, prompt, deadline=None):
+        seen["p"] = prompt
+        return "ok", [], "m"
+    monkeypatch.setattr(agent, "_run_agent", fake)
+    agent.ask(SID, "Is PE safe?", "en", replay="delhi-nov")
+    assert "2025-11-19" in seen["p"] and "delhi-nov" not in seen["p"]

@@ -46,6 +46,10 @@ def _school(school_id: str):
     return school
 
 
+class _BadDate(ValueError):
+    """A tool was asked for a date the forecast does not cover."""
+
+
 def make_tools(replay: str | None = None, sink: list | None = None) -> list[Callable]:
     """Agent tools bound to one request's context (live or a replay key). Every output is recorded in `sink`
     so the answer's numbers can be checked against exactly what the model saw."""
@@ -54,12 +58,23 @@ def make_tools(replay: str | None = None, sink: list | None = None) -> list[Call
             sink.append(value)
         return value
 
+    def _rows(school, date: str) -> tuple[list[dict], dict, str]:
+        """Rows + sources + the day to plan. Replay: always the recorded day (models sometimes pass the replay key
+        or "today" as a date). Live: an unknown date raises _BadDate listing the available dates."""
+        rows, src = _forecast(school, replay)
+        if replay:
+            return rows, src, rows[0]["time"][:10]
+        days = sorted({r["time"][:10] for r in rows})
+        day = date or days[0]
+        if day not in days:
+            raise _BadDate(f"No forecast for '{date}'. Available dates: {', '.join(days)}")
+        return rows, src, day
+
     def _plan(school_id: str, date: str = "") -> DayPlan:
         school = _school(school_id)
-        rows, src = _forecast(school, replay)
-        day = date or rows[0]["time"][:10]
+        rows, src, day = _rows(school, date)
         if replay:
-            return plan_day(school, rows, day, src, "replay", replay_date=rows[0]["time"][:10])
+            return plan_day(school, rows, day, src, "replay", replay_date=day)
         return plan_day(school, rows, day, src)
 
     def get_school(school_id: str) -> dict:
@@ -68,12 +83,17 @@ def make_tools(replay: str | None = None, sink: list | None = None) -> list[Call
 
     def get_day_plan(school_id: str, date: str = "") -> dict:
         """Return the deterministic per-period AQI plan (actions, swaps) for a date (YYYY-MM-DD, default today)."""
-        return _out(_plan(school_id, date).model_dump())
+        try:
+            return _out(_plan(school_id, date).model_dump())
+        except _BadDate as exc:
+            return _out({"error": str(exc)})
 
     def get_hourly_forecast(school_id: str, date: str = "") -> list[dict]:
         """Return calibrated hourly PM2.5/PM10 forecast points for a date."""
-        rows, _ = _forecast(_school(school_id), replay)
-        d = date or rows[0]["time"][:10]
+        try:
+            rows, _, d = _rows(_school(school_id), date)
+        except _BadDate as exc:
+            return _out([{"error": str(exc)}])
         return _out([r for r in rows if r["time"].startswith(d)])
 
     def find_best_day(school_id: str, start: str = "09:00", end: str = "12:00") -> dict:
@@ -84,7 +104,10 @@ def make_tools(replay: str | None = None, sink: list | None = None) -> list[Call
 
     def draft_notice(school_id: str, date: str = "", lang: str = "en") -> dict:
         """Return the deterministic parent notice text and WhatsApp URL."""
-        return _out(build_notice(_plan(school_id, date), lang))
+        try:
+            return _out(build_notice(_plan(school_id, date), lang))
+        except _BadDate as exc:
+            return _out({"error": str(exc)})
 
     return [get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice]
 
@@ -234,7 +257,10 @@ def ask(school_id: str, question: str, lang: str = "en", replay: str | None = No
     Number guard: any number >= 20 not found in this request's tool outputs, the question, or the school profile
     makes us return the deterministic answer instead."""
     sink: list[Any] = []
-    context = f"[school_id={school_id}] [lang={lang}]" + (f" [context: recorded replay day '{replay}', not today]" if replay else "")
+    context = f"[school_id={school_id}] [lang={lang}]"
+    if replay:
+        recorded = load_replay(replay)[1]
+        context += f" [context: replay of recorded data from {recorded}, not today. Call the tools without a date; they return that day.]"
     # API Gateway cuts requests at 30 s; give the model a budget and fall back to the plan summary if it is slow.
     budget = float(os.getenv("AGENT_TIMEOUT_S", "24"))
     pool = ThreadPoolExecutor(max_workers=1)
