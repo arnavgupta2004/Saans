@@ -4,15 +4,16 @@ import { DayPlan, PeriodPlan } from './types';
 import { getBandColor, getActionColor } from './utils/colors';
 import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
 
-export default function TodayView() {
+export default function TodayView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlan = async () => {
+      setLoading(true);
       try {
-        const data = await getDayPlan('demo-delhi');
+        const data = await getDayPlan(activeSchoolId);
         setPlan(data);
       } catch (err) {
         setError('Could not load plan');
@@ -21,7 +22,7 @@ export default function TodayView() {
       }
     };
     fetchPlan();
-  }, []);
+  }, [activeSchoolId]);
 
   if (loading) {
     return (

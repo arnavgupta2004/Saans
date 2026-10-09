@@ -3,7 +3,7 @@ import { getNotice } from './api';
 import { useLanguage } from './LanguageContext';
 import { Copy, Share2, Check } from 'lucide-react';
 
-export default function NoticeView() {
+export default function NoticeView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
   const { lang, t } = useLanguage();
   const [noticeLang, setNoticeLang] = useState<'en'|'hi'>(lang);
   const [noticeData, setNoticeData] = useState<any>(null);
@@ -14,7 +14,7 @@ export default function NoticeView() {
     const fetchNotice = async () => {
       setLoading(true);
       try {
-        const data = await getNotice('demo-delhi', noticeLang);
+        const data = await getNotice(activeSchoolId, noticeLang);
         setNoticeData(data);
       } catch (err) {
         console.error(err);
@@ -23,7 +23,7 @@ export default function NoticeView() {
       }
     };
     fetchNotice();
-  }, [noticeLang]);
+  }, [noticeLang, activeSchoolId]);
 
   const handleCopy = () => {
     if (noticeData) {
