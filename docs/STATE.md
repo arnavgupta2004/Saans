@@ -3,7 +3,7 @@
 > Every agent: update this file at every commit and before your usage runs out (AGENTS.md §6).
 > Statuses: `TODO` · `IN PROGRESS (<tool>, <time IST>)` · `DONE` · `BLOCKED (<why>)` · `CUT`
 
-**Last updated:** Claude — Fri 9 Oct 2026, 19:20 IST (T17 done)
+**Last updated:** Claude — Fri 9 Oct 2026 (planner honesty + swap rule fixes)
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** _(none yet)_
 **Deployed frontend URL:** _(none yet)_
@@ -12,7 +12,14 @@
 ---
 
 ## ▶ Resume here
-- **Task:** T12 deploy (blocked on local tooling), then T21 Amplify.
+- **Task:** Redeploy with the "planner honesty + swap rule" fixes, re-seed DynamoDB (schools changed), then T21 Amplify. Commands:
+```
+cd backend
+sam build --use-container
+sam deploy --stack-name saans --resolve-s3 --capabilities CAPABILITY_IAM --region us-east-1 --no-confirm-changeset --parameter-overrides DataGovInApiKey=$DATA_GOV_IN_API_KEY ModelProvider=gemini GeminiApiKey=$GEMINI_API_KEY
+AWS_DEFAULT_REGION=us-east-1 STORE=dynamo .venv/bin/python scripts/seed_dynamo.py saans-schools   # or ../.venv/bin/python
+```
+- (older notes below)
 - **Done:** frontend wired to API (VITE_API_URL, default http://localhost:8000); `backend/template.yaml`, `backend/scripts/seed_dynamo.py` written. Not deployed: `aws` session expired and `docker` is not installed.
 - **Next (human):** `aws login` (or `aws configure`), install/start Docker Desktop, then from repo root:
 ```
@@ -39,6 +46,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026, 17:45 IST | Antigravity | not run | passed |
 | Fri 9 Oct 2026, 17:55 IST | Antigravity | not run | passed |
 | Fri 9 Oct 2026, 19:00 IST | Claude | 56 passed | not run |
+| Fri 9 Oct 2026 (fix commit) | Claude | 75 passed | not run |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -80,6 +88,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 
 ## Decisions log (append only)
 - 2026-10-09 — Track 01 Air, sub-problem "School safety on bad days". Product: Saans. Stack per AGENTS.md §2. (Claude)
+- 2026-10-09 — Planner honesty + swap rule (Claude): (1) only outdoor periods get rules.py actions/swaps; indoor = `go`, "Indoor class — no change needed", `SAANS-INDOOR`. (2) Calibrate only with a live (or cached <2h) CPCB reading ≤25 km and station timestamp <2h; fixtures are never cached or relabelled "cached"; `DayPlan.mode` = FORECAST source, `sources.observation` separate; calibration ratio anchored on the current IST hour (was hour 0). (3) Swap rule changed (PLAN §3.3): outdoor+`indoors` period → cheapest same-day swappable slot (08:00–15:00) giving `go`/`caution`; replaces "2+ bands better". (4) `DayPlan.now` = current IST hour; worst/best hour over 07:00–16:00; `generated_at` IST with offset. (5) Seed PE labels match grade; two grades/school; period ids now `p0..p9` (re-seed Dynamo). (6) Agent failures logged via `logger.exception`. (7) `MODEL_PROVIDER=gemini` uses Strands `GeminiModel` (`strands-agents[gemini]`, `GEMINI_API_KEY` NoEcho SAM param, `GEMINI_MODEL_ID` default gemini-2.5-flash); Bedrock stays default. Added `saans/forecast.py` (shared loader for app + agent).
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

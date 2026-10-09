@@ -11,3 +11,17 @@ def test_tool_shapes(monkeypatch) -> None:
     assert agent.get_hourly_forecast(sid, "2026-10-09")
     assert "ranking" in agent.find_best_day(sid)
     assert "whatsapp_url" in agent.draft_notice(sid, "", "hi")
+
+
+def test_model_provider_gemini(monkeypatch) -> None:
+    from strands.models.gemini import GeminiModel
+    monkeypatch.setenv("MODEL_PROVIDER", "gemini"); monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    assert isinstance(agent._model(), GeminiModel)
+
+
+def test_model_provider_defaults_to_bedrock(monkeypatch) -> None:
+    from strands.models import BedrockModel
+    monkeypatch.delenv("MODEL_PROVIDER", raising=False)
+    for k in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"): monkeypatch.setenv(k, "x")
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    assert isinstance(agent._model(), BedrockModel)

@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import os
 
-from .calibrate import calibrate
+from .forecast import load_forecast
 from .notices import build_notice
 from .planner import best_day, plan_day
-from .sources import CpcbClient, OpenMeteoClient
 from .store import get_store
 
 SYSTEM_PROMPT = (
@@ -17,11 +16,8 @@ SYSTEM_PROMPT = (
 
 
 def _forecast(school):
-    hourly = OpenMeteoClient().hourly(school.lat, school.lon)
-    obs = CpcbClient().latest_near(school.lat, school.lon)
-    src = {"forecast": hourly[0].get("source", "open-meteo") if hourly else "open-meteo",
-           "observation": obs.get("source", "none"), "station": obs.get("station"), "distance_km": obs.get("distance_km")}
-    return calibrate(hourly, obs), src
+    rows, src, _ = load_forecast(school)
+    return rows, src
 
 
 def _school(school_id: str):
@@ -69,14 +65,22 @@ def DayPlanAdapter(school_id: str, date: str):
 TOOLS = [get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice]
 
 
-def ask(school_id: str, question: str, lang: str = "en") -> dict:
-    """Run the Strands agent. Raises on model failure; caller falls back."""
-    from strands import Agent, tool
+def _model():
+    """Bedrock Nova Lite by default; MODEL_PROVIDER=gemini uses Strands' Gemini provider (GEMINI_API_KEY)."""
+    if os.getenv("MODEL_PROVIDER", "bedrock").lower() == "gemini":
+        from strands.models.gemini import GeminiModel
+        return GeminiModel(client_args={"api_key": os.environ["GEMINI_API_KEY"]},
+                           model_id=os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash"))
     from strands.models import BedrockModel
+    return BedrockModel(model_id=os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0"),
+                        region_name=os.getenv("AWS_REGION", "us-east-1"))
 
-    model = BedrockModel(model_id=os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0"),
-                         region_name=os.getenv("AWS_REGION", "us-east-1"))
-    agent = Agent(model=model, system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in TOOLS])
+
+def ask(school_id: str, question: str, lang: str = "en") -> dict:
+    """Run the Strands agent. Raises on model failure; caller logs and falls back."""
+    from strands import Agent, tool
+
+    agent = Agent(model=_model(), system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in TOOLS])
     result = agent(f"[school_id={school_id}] [lang={lang}] {question}")
     used = [name for name in getattr(result.metrics, "tool_metrics", {}) or {}]
     return {"answer": str(result), "tools_used": used}

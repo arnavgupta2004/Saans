@@ -16,3 +16,7 @@ curl -X POST http://localhost:8000/api/ask -H 'Content-Type: application/json' -
 ```
 
 To create or replace a school, `POST` the `School` JSON returned by `/api/schools` to `/api/schools`.
+
+## Agent
+
+Agent built with Strands Agents (AWS open source); Bedrock Nova Lite supported, Gemini used while our account's Bedrock access was pending. Select with `MODEL_PROVIDER=bedrock|gemini` (Gemini needs `GEMINI_API_KEY`). Safety decisions always come from deterministic `rules.py`; the model only explains.

@@ -10,6 +10,14 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: us.amazon.nova-lite-v1:0
+  ModelProvider:
+    Type: String
+    Default: bedrock
+    AllowedValues: [bedrock, gemini]
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
 
 Resources:
   SchoolsTable:
@@ -52,6 +60,8 @@ Resources:
         Variables:
           STORE: dynamo
           BEDROCK_MODEL_ID: !Ref BedrockModelId
+          MODEL_PROVIDER: !Ref ModelProvider
+          GEMINI_API_KEY: !Ref GeminiApiKey
           DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
           CACHE_TABLE: !Ref CacheTable
       Policies:

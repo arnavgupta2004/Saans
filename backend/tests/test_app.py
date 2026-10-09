@@ -36,3 +36,21 @@ def test_ask_falls_back_when_agent_fails(monkeypatch) -> None:
     sid = c.get("/api/schools").json()[0]["id"]
     r = c.post("/api/ask", json={"school_id": sid, "question": "x"})
     assert r.status_code == 200 and r.json()["tools_used"] == []
+
+
+def test_mode_reflects_forecast_not_observation(monkeypatch) -> None:
+    import saans.forecast as fc
+    monkeypatch.setattr(fc.OpenMeteoClient, "hourly", lambda self, la, lo, days=5: [{"time": "2026-10-09T09:00", "pm25": 50, "pm10": 60, "source": "live"}])
+    monkeypatch.setattr(fc.CpcbClient, "latest_near", lambda self, la, lo: {"station": "S", "distance_km": 1, "pm25": 500, "pm10": 5, "source": "fixture"})
+    rows, source, mode = fc.load_forecast(api._store().list()[0])
+    assert mode == "live" and source["observation"] == "fixture" and rows[0]["calibrated"] is False and rows[0]["pm25_cal"] == 50
+
+
+def test_agent_failure_is_logged_with_traceback(monkeypatch, caplog) -> None:
+    import saans.agent as agent
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom-bedrock")))
+    c = TestClient(api.app)
+    sid = c.get("/api/schools").json()[0]["id"]
+    with caplog.at_level("ERROR"):
+        c.post("/api/ask", json={"school_id": sid, "question": "x"})
+    assert any(r.exc_info and "boom-bedrock" in str(r.exc_info[1]) for r in caplog.records)

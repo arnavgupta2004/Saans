@@ -80,7 +80,9 @@ Based on CPCB health-advisory categories; the thresholds for school actions are 
 | Very Poor (301–400) | **Indoors** | **Indoors** (assembly over PA/classroom) | Indoors; inform parents |
 | Severe (>400) | **Indoors** | **Indoors** | Indoors; escalate to management; follow state/GRAP directives |
 
-Extra rule: if a window in the timetable has a forecast band **2+ categories** better than a scheduled outdoor high-intensity period on the same day, suggest the swap (`planner.py`). Only suggest swaps into slots marked swappable in the timetable (default: any class period between 08:00 and 15:00).
+Only **outdoor** periods get protocol actions (indoor periods are `go` / "Indoor class — no change needed", rule `SAANS-INDOOR`).
+
+Swap rule: for an outdoor period whose action is `indoors`, suggest a swap when a swappable slot the same day (start 08:00–15:00; indoor class periods are valid targets) would give level `go` or `caution` for the same activity. Pick the lowest-AQI such slot; `gain_bands` = band difference. (`planner.py`; supersedes the earlier "2+ bands better" rule.)
 
 ### 3.4 Best day finder
 For an activity with a duration and preferred hours (e.g., Sports Day 09:00–12:00), score each of the next 5 days by **max calibrated hourly AQI** in that window (lower is better), tie-break by mean. Return ranking + reason.

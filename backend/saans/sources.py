@@ -18,6 +18,10 @@ class _Cache:
         item = cls.values.get(key)
         return item[1] if item and time.time() - item[0] < 3600 else None
     @classmethod
+    def age(cls, key: str) -> float:
+        item = cls.values.get(key)
+        return time.time() - item[0] if item else 0.0
+    @classmethod
     def put(cls, key: str, value: Any) -> Any:
         cls.values[key] = (time.time(), value); return value
 
@@ -28,7 +32,7 @@ class OpenMeteoClient:
     def __init__(self, client: httpx.Client | None = None): self.client = client or httpx.Client(timeout=15)
     def hourly(self, lat: float, lon: float, days: int = 5) -> list[dict[str, Any]]:
         key = f"om:{lat}:{lon}:{days}"; cached = _Cache.get(key)
-        if cached: return [{**row, "source": "cached"} for row in cached]
+        if cached: return [{**row, "source": "cached"} for row in cached]  # only live data is ever cached
         try:
             data = self.client.get(OPEN_METEO_URL, params={"latitude":lat,"longitude":lon,"hourly":"pm2_5,pm10","forecast_days":days,"timezone":"Asia/Kolkata"}).json()
             source = "live"
@@ -36,7 +40,8 @@ class OpenMeteoClient:
             data = _load("open_meteo_delhi_anand_vihar.json"); source = "fixture"
         h = data["hourly"]
         rows = [{"time": t, "pm25": p25, "pm10": p10, "source": source} for t,p25,p10 in zip(h["time"],h["pm2_5"],h["pm10"])]
-        return _Cache.put(key, rows)
+        # Fixture data is never cached, so the next request retries the live API.
+        return _Cache.put(key, rows) if source == "live" else rows
 
 def _num(value: Any) -> float | None:
     try: return float(value)
@@ -56,7 +61,7 @@ class CpcbClient:
     def __init__(self, api_key: str | None = None, client: httpx.Client | None = None): self.api_key, self.client = api_key or os.getenv("DATA_GOV_IN_API_KEY"), client or httpx.Client(timeout=15)
     def latest_near(self, lat: float, lon: float) -> dict[str, Any]:
         key=f"cpcb:{lat}:{lon}"; cached=_Cache.get(key)
-        if cached: return {**cached,"source":"cached"}
+        if cached: return {**cached,"source":"cached","age_s":round(_Cache.age(key))}
         source="live"
         try:
             if not self.api_key: raise RuntimeError("DATA_GOV_IN_API_KEY missing")
@@ -73,5 +78,5 @@ class CpcbClient:
         choices=[g for g in groups.values() if g.get("pm25") is not None]
         if not choices: raise RuntimeError("No CPCB station with PM2.5")
         chosen=min(choices,key=lambda g:_distance(lat,lon,g["latitude"],g["longitude"]))
-        result={"station":chosen["station"],"distance_km":round(_distance(lat,lon,chosen["latitude"],chosen["longitude"]),2),"pm25":chosen["pm25"],"pm10":chosen.get("pm10"),"observed_at":chosen.get("observed_at"),"source":source}
-        return _Cache.put(key,result)
+        result={"station":chosen["station"],"distance_km":round(_distance(lat,lon,chosen["latitude"],chosen["longitude"]),2),"pm25":chosen["pm25"],"pm10":chosen.get("pm10"),"observed_at":chosen.get("observed_at"),"source":source,"age_s":0}
+        return _Cache.put(key,result) if source=="live" else result

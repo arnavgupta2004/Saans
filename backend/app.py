@@ -1,6 +1,7 @@
 """Saans HTTP API; decisions are produced only by the deterministic planner."""
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
@@ -8,13 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from pydantic import BaseModel
 
-from saans.calibrate import calibrate
+from saans.forecast import load_forecast
 from saans.models import DayPlan, School
 from saans.planner import best_day, plan_day, plan_week
-from saans.sources import CpcbClient, OpenMeteoClient
 from saans.store import SchoolStore, get_store
 
 
+logger = logging.getLogger(__name__)
 app = FastAPI(title="Saans", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://localhost:8000"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -31,12 +32,7 @@ def _school_or_404(school_id: str) -> School:
 
 
 def _forecast(school: School) -> tuple[list[dict], dict, str]:
-    hourly = OpenMeteoClient().hourly(school.lat, school.lon)
-    observation = CpcbClient().latest_near(school.lat, school.lon)
-    rows = calibrate(hourly, observation)
-    source = {"forecast": hourly[0].get("source", "open-meteo") if hourly else "open-meteo", "observation": observation.get("source", "none"), "station": observation.get("station"), "distance_km": observation.get("distance_km")}
-    mode = "cached" if "cached" in (source["forecast"], source["observation"]) else ("fixture" if "fixture" in (source["forecast"], source["observation"]) else "live")
-    return rows, source, mode
+    return load_forecast(school)
 
 
 def _day_plan(school: School, replay: str | None = None) -> DayPlan:
@@ -108,6 +104,7 @@ def ask(request: AskRequest) -> dict:
         from saans.agent import ask as agent_ask
         return agent_ask(request.school_id, request.question, request.lang)
     except Exception:
+        logger.exception("Agent failed for school %s; returning deterministic fallback", request.school_id)
         answer = "Saans' assistant is unavailable right now. Please use today's deterministic safety plan."
         if request.lang == "hi":
             answer = "Saans सहायक अभी उपलब्ध नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"

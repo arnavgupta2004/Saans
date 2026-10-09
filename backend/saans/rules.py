@@ -119,3 +119,6 @@ def action_for(activity_type: str, intensity: str, band: str, sensitive: bool = 
     if sensitive:
         return _sensitive_action(band)
     return _normal_action(band, intensity, _activity_name(activity_type))
+
+
+INDOOR_ACTION = Action("go", "Indoor class — no change needed", "इनडोर कक्षा — किसी बदलाव की आवश्यकता नहीं", "SAANS-INDOOR")
