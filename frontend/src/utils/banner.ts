@@ -6,11 +6,15 @@ export interface Banner {
   text: string;
 }
 
+/** "2025-11-19" -> "19 Nov 2025" (never breaks mid-date). */
+export const prettyDate = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
 /** Which data-honesty banner the Today screen must show for a plan (null = live data, no banner). */
 export function modeBanner(plan: Pick<DayPlan, 'mode' | 'date' | 'generated_at' | 'replay_date'>): Banner | null {
   switch (plan.mode) {
     case 'replay':
-      return { kind: 'replay', text: `Replay: recorded Delhi air from ${plan.replay_date ?? plan.date}` };
+      return { kind: 'replay', text: `Replay: recorded Delhi air, ${prettyDate(plan.replay_date ?? plan.date)}` };
     case 'fixture':
       return { kind: 'fixture', text: "Sample data: the live forecast is unavailable right now. This is not today's air." };
     case 'cached': {

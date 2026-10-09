@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getDayPlan, REPLAY_KEY } from './api';
 import { DayPlan, PeriodPlan } from './types';
 import { getBandTextColor, getBandColor } from './utils/colors';
-import { modeBanner, BANNER_STYLE } from './utils/banner';
+import { modeBanner, BANNER_STYLE, prettyDate } from './utils/banner';
 import { aqiDisplay, bandLabel, outdoorPeriods, swapText, verdict } from './utils/plan';
 import { useLanguage, TKey } from './LanguageContext';
 import { CheckCircle2, AlertTriangle, Home, ArrowLeftRight, HeartPulse, Info, Clock, BookOpen } from 'lucide-react';
@@ -122,7 +122,7 @@ export default function TodayView({
         <div className="bg-white rounded-3xl border border-stone-200/80 px-5 pt-4 pb-5">
           <div className="flex items-center justify-between text-xs text-stone-500">
             <span>{t('airNow')}{now ? ` · ${now.time.slice(11, 16)}` : ''}</span>
-            <span>{plan.mode === 'replay' ? plan.replay_date : plan.date}</span>
+            <span>{prettyDate(plan.mode === 'replay' ? plan.replay_date ?? plan.date : plan.date)}</span>
           </div>
           {now && shown ? (
             <div className="mt-1 flex items-baseline gap-3">
