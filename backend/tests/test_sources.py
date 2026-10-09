@@ -178,3 +178,21 @@ def test_openaq_requires_key(monkeypatch) -> None:
     monkeypatch.delenv("OPENAQ_API_KEY", raising=False); _Cache.values.clear()
     with pytest.raises(RuntimeError, match="OPENAQ_API_KEY"):
         OpenAqClient(api_key=None).latest_near(1, 2)
+
+
+def test_openaq_failure_reason_counts() -> None:
+    import pytest
+    _Cache.values.clear()
+    locs = [_loc(1, "Air Check", 28.650, 77.316, monitor=False), _loc(2, "Stale", 28.66, 77.316), _loc(3, "Far", 29.5, 77.316),
+            {**_loc(4, "No PM", 28.66, 77.316), "sensors": [{"id": 9, "parameter": {"id": 1, "name": "pm10"}}]}]
+    with pytest.raises(RuntimeError) as e:
+        _openaq(locs, {2: [_latest(20, 50, "2026-01-01T08:00:00+05:30")]}).latest_near(28.647, 77.316)
+    msg = str(e.value)
+    for part in ("not_monitor=1", "too_far=1", "no_pm25_sensor=1", "stale=1"):
+        assert part in msg
+
+
+def test_station_blank_when_observation_not_used(monkeypatch) -> None:
+    fc = _patch_chain(monkeypatch, {**_LIVE_CPCB, "source": "fixture"}, RuntimeError("no monitor"))
+    _, src, _ = fc.load_forecast(_school())
+    assert src["observation"] == "fixture:cpcb" and src["station"] is None and src["distance_km"] is None

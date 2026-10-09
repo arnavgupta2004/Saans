@@ -32,5 +32,6 @@ def load_forecast(school: School) -> tuple[list[dict[str, Any]], dict[str, Any],
     hourly = OpenMeteoClient().hourly(school.lat, school.lon)
     obs = observe(school.lat, school.lon)
     forecast = hourly[0].get("source", "live") if hourly else "fixture"
-    source = {"forecast": forecast, "observation": _label(obs), "station": (obs or {}).get("station"), "distance_km": (obs or {}).get("distance_km")}
+    used = obs if observation_usable(obs) else None  # only name a station that actually calibrated the forecast
+    source = {"forecast": forecast, "observation": _label(obs), "station": (used or {}).get("station"), "distance_km": (used or {}).get("distance_km")}
     return calibrate(hourly, obs), source, forecast
