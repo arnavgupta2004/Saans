@@ -4,7 +4,7 @@ import { getBandColor } from './utils/colors';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar, Search } from 'lucide-react';
 
-export default function WeekView() {
+export default function WeekView({ activeSchoolId = 'demo-delhi' }: { activeSchoolId?: string }) {
   const [weekData, setWeekData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bestDayStart, setBestDayStart] = useState('09:00');
@@ -14,8 +14,9 @@ export default function WeekView() {
 
   useEffect(() => {
     const fetchWeek = async () => {
+      setLoading(true);
       try {
-        const data = await getWeekPlan('demo-delhi');
+        const data = await getWeekPlan(activeSchoolId);
         setWeekData(data);
       } catch (err) {
         console.error(err);
@@ -24,12 +25,12 @@ export default function WeekView() {
       }
     };
     fetchWeek();
-  }, []);
+  }, [activeSchoolId]);
 
   const handleFindBestDay = async () => {
     setBestDayLoading(true);
     try {
-      const data = await getBestDay('demo-delhi', bestDayStart, bestDayEnd);
+      const data = await getBestDay(activeSchoolId, bestDayStart, bestDayEnd);
       setBestDayData(data);
     } catch (err) {
       console.error(err);
