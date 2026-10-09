@@ -44,6 +44,7 @@ Globals:
         GEMINI_MODEL_ID: !Ref GeminiModelId
         GEMINI_FALLBACK_MODEL_ID: !Ref GeminiFallbackModelId
         AGENT_TIMEOUT_S: '20'
+        GEMINI_ATTEMPT_TIMEOUT_S: '6'
         OPENAQ_API_KEY: !Ref OpenAqApiKey
         DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
         CACHE_TABLE: !Ref CacheTable

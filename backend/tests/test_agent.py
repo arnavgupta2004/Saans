@@ -185,10 +185,11 @@ def test_real_genai_server_error_is_retryable() -> None:
 
 
 def test_backoff_skipped_when_deadline_too_close(monkeypatch) -> None:
-    import time
-    calls = _calls(monkeypatch, {"primary": [_Fake503("a"), "never"], "lite": ["lite ok"]})
-    assert agent._run_agent([], "q", deadline=time.monotonic() + 0.1)[2] == "lite"
-    assert not any(str(c).startswith("sleep") for c in calls)
+    import time, pytest
+    calls = _calls(monkeypatch, {"primary": [_Fake503("a"), "never"], "lite": ["never"]})
+    with pytest.raises(_Fake503):
+        agent._run_agent([], "q", deadline=time.monotonic() + 0.1)
+    assert calls == ["primary"]  # no sleep, no retry, no fallback attempt that could not finish in time
 
 
 def test_ask_response_includes_model(monkeypatch) -> None:
@@ -196,3 +197,35 @@ def test_ask_response_includes_model(monkeypatch) -> None:
     r = agent.ask(SID, "q", "en", replay="delhi-nov")
     assert r["model"] == "lite" and r["verified"] is True
     assert agent.deterministic_answer(SID, "en", "delhi-nov")["model"] is None
+
+
+def test_gemini_client_has_per_call_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("MODEL_PROVIDER", "gemini"); monkeypatch.setenv("GEMINI_API_KEY", "k"); monkeypatch.setenv("GEMINI_MODEL_ID", "m")
+    monkeypatch.setenv("GEMINI_ATTEMPT_TIMEOUT_S", "7")
+    assert agent._model().client_args["http_options"] == {"timeout": 7000}
+
+
+def test_retry_only_if_budget_leaves_room_for_fallback_model(monkeypatch) -> None:
+    import time
+    # 503 on primary with ~10 s left and 7 s per attempt: retrying would starve the fallback model -> go to lite now
+    monkeypatch.setenv("GEMINI_ATTEMPT_TIMEOUT_S", "7")
+    calls = _calls(monkeypatch, {"primary": [_Fake503("busy"), "never"], "lite": ["lite ok"]})
+    assert agent._run_agent([], "q", deadline=time.monotonic() + 10)[2] == "lite"
+    assert calls == ["primary", "lite"]
+
+
+def test_retry_primary_when_budget_allows(monkeypatch) -> None:
+    import time
+    monkeypatch.setenv("GEMINI_ATTEMPT_TIMEOUT_S", "3")
+    calls = _calls(monkeypatch, {"primary": [_Fake503("busy"), "ok"], "lite": []})
+    assert agent._run_agent([], "q", deadline=time.monotonic() + 20)[2] == "primary"
+    assert calls == ["primary", "sleep 0.5", "primary"]
+
+
+def test_skip_attempt_when_not_enough_time_left(monkeypatch) -> None:
+    import time, pytest
+    monkeypatch.setenv("GEMINI_ATTEMPT_TIMEOUT_S", "7")
+    calls = _calls(monkeypatch, {"primary": [_Fake503("busy")], "lite": ["never"]})
+    with pytest.raises(_Fake503):
+        agent._run_agent([], "q", deadline=time.monotonic() + 3)  # < 1 attempt left for lite: don't start it
+    assert calls == ["primary"]

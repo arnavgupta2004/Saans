@@ -142,9 +142,15 @@ def _model(model_id: str | None = None):
     """Bedrock by default; MODEL_PROVIDER=gemini uses Strands' Gemini provider. Model ids come only from env (SAM params)."""
     if _provider() == "gemini":
         from strands.models.gemini import GeminiModel
-        return GeminiModel(client_args={"api_key": _env("GEMINI_API_KEY")}, model_id=model_id or _env("GEMINI_MODEL_ID"))
+        # Per-request timeout: an overloaded Gemini can take ~18 s just to return 503, which would eat the whole budget.
+        return GeminiModel(client_args={"api_key": _env("GEMINI_API_KEY"), "http_options": {"timeout": int(_attempt_timeout_s() * 1000)}},
+                           model_id=model_id or _env("GEMINI_MODEL_ID"))
     from strands.models import BedrockModel
     return BedrockModel(model_id=model_id or _env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
+
+
+def _attempt_timeout_s() -> float:
+    return float(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "6"))
 
 
 def _provider() -> str:
@@ -189,10 +195,20 @@ def _invoke(model_id: str, tools: list[Callable], prompt: str) -> tuple[str, lis
 
 def _run_agent(tools: list[Callable], prompt: str, deadline: float | None = None) -> tuple[str, list[str], str]:
     """Try each candidate model; retry transient errors up to 2 times (0.5 s, 1.5 s) while the deadline allows.
-    Non-retryable errors (e.g. 404 model unavailable) move straight to the next model. Raises the last error."""
+    Budget rule: retry a model only if the remaining time still covers the retry plus one attempt for every later
+    model; start an attempt only if one attempt (GEMINI_ATTEMPT_TIMEOUT_S) fits. Non-retryable errors (e.g. 404)
+    move straight to the next model. Raises the last error."""
     last: BaseException | None = None
-    for model_id in _candidate_models():
+    per = _attempt_timeout_s()
+    left = (lambda: deadline - time.monotonic()) if deadline is not None else (lambda: float("inf"))
+    models = _candidate_models()
+    for i, model_id in enumerate(models):
+        later = len(models) - i - 1
         for attempt in range(len(_BACKOFF_S) + 1):
+            if last is not None and attempt == 0 and left() < per:
+                logger.warning("Skipping model %s: %.1fs left, attempt needs %.1fs", model_id, left(), per)
+                assert last is not None
+                raise last
             try:
                 answer, used = _invoke(model_id, tools, prompt)
                 logger.info("Agent answered with model %s (attempt %d)", model_id, attempt + 1)
@@ -203,8 +219,8 @@ def _run_agent(tools: list[Callable], prompt: str, deadline: float | None = None
                 if not _retryable(exc) or attempt == len(_BACKOFF_S):
                     break
                 delay = _BACKOFF_S[attempt]
-                if deadline is not None and time.monotonic() + delay + 1.0 > deadline:
-                    break  # not enough budget left to wait; try the next model
+                if left() < delay + per * (1 + later):
+                    break  # retrying would starve the fallback model (or overrun); move on
                 _sleep(delay)
     assert last is not None
     raise last

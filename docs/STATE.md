@@ -54,6 +54,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (calibration note) | Claude | 125 passed | passed |
 | Fri 9 Oct 2026 (T19) | Claude | 138 passed | passed |
 | Fri 9 Oct 2026 (T23) | Claude | 144 passed | passed (+ vitest 4 passed) |
+| Fri 9 Oct 2026 (attempt timeout) | Claude | 148 passed | — |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -79,7 +80,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T16 | Frontend Notice + EN/HI toggle | Antigravity | T11 | DONE | Notice view with WhatsApp share and EN/HI tabs. Global language context added. |
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
 | T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
-| T19 | Daily EventBridge job | Cursor | T12 | DONE (not yet deployed) | `DailyFunction` (jobs/daily.py) via EventBridge Scheduler `cron(0 6 * * ? *)` Asia/Kolkata → saans-cache `school_id#date` {rows, sources, plan, stored_at}. /today serves it as mode "cached" if < 3 h old (re-planned so `now` is current; generated_at = fetch time), else live; cache errors → live. |
+| T19 | Daily EventBridge job | Cursor | T12 | DONE (deployed + invoked OK 22:38 IST) | `DailyFunction` (jobs/daily.py) via EventBridge Scheduler `cron(0 6 * * ? *)` Asia/Kolkata → saans-cache `school_id#date` {rows, sources, plan, stored_at}. /today serves it as mode "cached" if < 3 h old (re-planned so `now` is current; generated_at = fetch time), else live; cache errors → live. |
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE (minimal) | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
@@ -118,6 +119,8 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — T23 (Claude): new frontend devDependency `vitest@3.2.4` (`npm test`) for `src/utils/banner.ts`. No backend code changes were needed — all failure scenarios already returned 200 with honest labels.
 - 2026-10-09 — Alarms (Claude): CloudWatch alarms `saans-api-errors` and `saans-daily-errors` (Lambda Errors Sum ≥ 5 in 300 s, missing data = not breaching). No notification action yet (no email/SNS configured) — visible in CloudWatch console.
 - 2026-10-09 — Gemini fallback model (Claude): human listed models with their key; `gemini-3.8-flash-lite` does not exist (only `-tts`). `GeminiFallbackModelId` default → `gemini-3.5-flash-lite` (stable text model, different generation from primary). Note: being listed ≠ usable (gemini-2.5-flash is listed but 404s for new users).
+- 2026-10-09 — Deploy verification #3 (Claude, 22:35–22:40 IST, after human deploy of 8d7f728): live /today OK (live, uncalibrated, note "…51 h ago"); replay OK (PE "Hold PE indoors." ⇄ Period 8 13:40, 351→127); daily job invoke OK (3 stored, 0 failed) → /today mode "cached"; Amplify index + bundle reference qcx2qrt6bj API, no localhost. Ask ×2 = timed_out fallback: Gemini took ~18 s to return 503 / hung, so retries + fallback model never ran.
+- 2026-10-09 — Gemini per-attempt timeout (Claude): `GEMINI_ATTEMPT_TIMEOUT_S` (6 s, template env) → genai `http_options.timeout`; retry only if remaining budget covers retry + one attempt per later model; start an attempt only if one fits. NEEDS REDEPLOY.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises
