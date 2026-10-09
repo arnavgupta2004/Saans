@@ -49,6 +49,8 @@ export interface Swap {
   to_aqi: number;
   to_band: string;
   gain_bands: number;
+  /** true = period is only 'caution'; a cleaner slot exists but the swap is a suggestion, not a safety action */
+  optional?: boolean;
 }
 
 export interface PeriodPlan {

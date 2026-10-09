@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Saans - AQI-smart school timetables
+
+Parameters:
+  DataGovInApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  BedrockModelId:
+    Type: String
+    Default: us.amazon.nova-lite-v1:0
+  ModelProvider:
+    Type: String
+    Default: bedrock
+    AllowedValues: [bedrock, gemini]
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+
+Resources:
+  SchoolsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: saans-schools
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: id, AttributeType: S}
+      KeySchema:
+        - {AttributeName: id, KeyType: HASH}
+
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: saans-cache
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: key, AttributeType: S}
+      KeySchema:
+        - {AttributeName: key, KeyType: HASH}
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: ['*']
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 1024
+      Environment:
+        Variables:
+          STORE: dynamo
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          MODEL_PROVIDER: !Ref ModelProvider
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          DATA_GOV_IN_API_KEY: !Ref DataGovInApiKey
+          CACHE_TABLE: !Ref CacheTable
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref SchoolsTable}
+        - DynamoDBCrudPolicy: {TableName: !Ref CacheTable}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:Converse
+                - bedrock:ConverseStream
+              Resource: '*'
+      Events:
+        Proxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiUrl:
+    Description: Base API URL (use as VITE_API_URL)
+    Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'

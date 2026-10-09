@@ -92,6 +92,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — aqi.py bugfix (Claude): CPCB breakpoint gaps (60→61, 100→101, 250→251…) made decimal concentrations such as PM2.5 60.1 return AQI 500/Severe; bands are now contiguous. Found in live /today output. Needs redeploy.
 - 2026-10-09 — CPCB parser (Claude): real data.gov.in rows use `pollutant_avg` (+ "NA" strings); old parser only knew `avg_value`, so live always fell to the fixture silently. Now handles pollutant_avg/avg_value, "NA", groups by station, nearest with PM2.5, and logs the exact failure reason (logger.warning). UNVERIFIED against a real response: `backend/fixtures/cpcb_live_sample.json` was missing from the repo and api.data.gov.in is unreachable from the agent sandbox. Human: capture a sample (see chat) and commit it.
 - 2026-10-09 — Replay (Claude): `replay` query param is now a recording key (`delhi-nov`), not a date; unknown key → 404. Replay uses sources.forecast="recorded", observation "none", uncalibrated; `now` = 08:00 reading. Footer no longer claims "calibrated" unless `now.calibrated`.
+- 2026-10-09 — Optional swap (Claude): `Swap.optional` (default false). `caution` outdoor period + same-day swappable slot giving `go` → swap with optional=true; frontend renders it as "Better slot available". PLAN §3.3 updated.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

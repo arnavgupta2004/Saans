@@ -41,8 +41,8 @@ def test_swap_allowed_for_one_band_gain_when_target_is_go_or_caution():
  p=plan_day(_school2(),[_hr(9,100),_hr(13,80)],"2026-10-09")
  assert p.periods[0].action.level=="indoors" and p.periods[0].swap.gain_bands==1
 
-def test_no_swap_when_action_not_indoors_or_target_also_unsafe():
- assert plan_day(_school2(),[_hr(9,80),_hr(13,20)],"2026-10-09").periods[0].swap is None
+def test_no_swap_when_action_is_go_or_target_also_unsafe():
+ assert plan_day(_school2(),[_hr(9,20),_hr(13,5)],"2026-10-09").periods[0].swap is None
  assert plan_day(_school2(),[_hr(9,200),_hr(13,200)],"2026-10-09").periods[0].swap is None
  assert plan_day(_school2(),[_hr(9,200),_hr(15,5)],"2026-10-09").periods[0].swap is None  # 15:00 is outside 08:00-15:00
 
@@ -60,3 +60,15 @@ def test_mode_follows_forecast_source_not_observation():
  rows=[_hr(9,50)]
  assert plan_day(_school2(),rows,"2026-10-09",{"forecast":"live","observation":"fixture"}).mode=="live"
  assert plan_day(_school2(),rows,"2026-10-09",{"forecast":"fixture","observation":"live"}).mode=="fixture"
+
+def test_caution_period_gets_optional_swap_only_to_a_go_slot():
+ p=plan_day(_school2(),[_hr(9,80),_hr(10,70),_hr(13,20)],"2026-10-09").periods[0]
+ assert p.action.level=="caution" and p.swap.optional is True and p.swap.to_start=="13:00" and p.swap.to_band=="Good"
+ # another caution slot is not "better enough": no optional swap
+ assert plan_day(_school2(),[_hr(9,80),_hr(13,80)],"2026-10-09").periods[0].swap is None
+
+def test_indoors_swap_is_not_optional():
+ assert plan_day(_school2(),[_hr(9,200),_hr(13,20)],"2026-10-09").periods[0].swap.optional is False
+
+def test_go_period_never_gets_a_swap():
+ assert plan_day(_school2(),[_hr(9,20),_hr(13,5)],"2026-10-09").periods[0].swap is None

@@ -137,8 +137,17 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
               </div>
             )}
 
-            {/* Swap Suggestion */}
-            {p.swap && (
+            {/* Swap Suggestion: required (indoors) is prominent; optional (caution) is softer */}
+            {p.swap && (p.swap.optional ? (
+              <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-600">
+                  <span className="font-semibold">Better slot available:</span> {p.swap.to_start} (AQI {p.swap.to_aqi}, {p.swap.to_band})
+                </p>
+                <button className="text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-100 py-1 px-2.5 rounded-md shrink-0">
+                  Optional swap
+                </button>
+              </div>
+            ) : (
               <div className="px-4 py-3 bg-blue-50/80 border-t border-blue-100">
                 <div className="flex items-center gap-3">
                   <div className="bg-blue-100 p-2 rounded-full shrink-0">
@@ -146,7 +155,7 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-blue-900">
-                      Swap to {p.swap.to_start} 
+                      Swap to {p.swap.to_start}
                       <span className="text-blue-700 font-normal ml-1">(AQI drops to {p.swap.to_aqi})</span>
                     </p>
                     <button className="mt-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 py-1.5 px-3 rounded-md transition-colors shadow-sm">
@@ -155,7 +164,7 @@ export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { ac
                   </div>
                 </div>
               </div>
-            )}
+            ))}
           </div>
         ))}
       </main>

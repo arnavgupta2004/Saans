@@ -10,7 +10,7 @@ class School(BaseModel):
 class HourPoint(BaseModel):
  time:str; pm25:float; pm10:float; pm25_cal:float; pm10_cal:float; aqi:int; band:str; calibrated:bool
 class Swap(BaseModel):
- to_start:str; to_end:str; to_aqi:int; to_band:str; gain_bands:int
+ to_start:str; to_end:str; to_aqi:int; to_band:str; gain_bands:int; optional:bool=False
 class PeriodPlan(BaseModel):
  period:Period; aqi:int; band:str; action:Action; sensitive_action:Action; swap:Swap|None=None
 class Sources(BaseModel):

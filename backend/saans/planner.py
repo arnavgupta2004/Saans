@@ -26,18 +26,18 @@ def _today_ist()->datetime: return datetime.now(IST)
 def _pick_now(hours:list[HourPoint], now:datetime)->HourPoint|None:
  """The hour point for the current IST hour-of-day (same hour on a replayed date)."""
  return next((h for h in hours if _hour(h.time)==now.hour),None) or (min(hours,key=lambda h:abs(_hour(h.time)-now.hour)) if hours else None)
-def _swap_for(period:Period, band:str, candidates:list[Period], rows:list[dict[str,Any]])->Swap|None:
- """Cleanest same-day swappable slot that would make this activity 'go' or 'caution'."""
+def _swap_for(period:Period, band:str, candidates:list[Period], rows:list[dict[str,Any]], accept:tuple[str,...]=("go","caution"), optional:bool=False)->Swap|None:
+ """Cleanest same-day swappable slot whose action level for this activity is in `accept`."""
  choices=[]
  for target in candidates:
   if target.id==period.id: continue
   target_aqi,target_band=_period_aqi(rows,target)
   if not _points(rows,target): continue
-  if action_for(period.type,period.intensity,target_band).level in ("go","caution"):
+  if action_for(period.type,period.intensity,target_band).level in accept:
    choices.append((target_aqi,target.start,target,target_band))
  if not choices: return None
  target_aqi,_,target,target_band=min(choices,key=lambda x:(x[0],x[1]))
- return Swap(to_start=target.start,to_end=target.end,to_aqi=target_aqi,to_band=target_band,gain_bands=_RANK[band]-_RANK[target_band])
+ return Swap(to_start=target.start,to_end=target.end,to_aqi=target_aqi,to_band=target_band,gain_bands=_RANK[band]-_RANK[target_band],optional=optional)
 def plan_day(school:School,hourly_cal:list[dict[str,Any]], date:str|Date, sources:dict[str,Any]|None=None, mode:str|None=None, now:datetime|None=None, replay_date:str|None=None)->DayPlan:
  day=str(date); rows=[p for p in hourly_cal if p["time"].startswith(day)]
  hours=[_point(p) for p in rows]
@@ -50,7 +50,9 @@ def plan_day(school:School,hourly_cal:list[dict[str,Any]], date:str|Date, source
   if not period.outdoor:
    plans.append(PeriodPlan(period=period,aqi=aqi,band=band,action=INDOOR_ACTION,sensitive_action=INDOOR_ACTION)); continue
   action=action_for(period.type,period.intensity,band)
-  swap=_swap_for(period,band,candidates,rows) if action.level=="indoors" else None
+  swap=None
+  if action.level=="indoors": swap=_swap_for(period,band,candidates,rows)
+  elif action.level=="caution": swap=_swap_for(period,band,candidates,rows,("go",),optional=True)  # "Better slot available"
   plans.append(PeriodPlan(period=period,aqi=aqi,band=band,action=action,sensitive_action=action_for(period.type,period.intensity,band,True),swap=swap))
  source=sources or {}
  forecast=source.get("forecast","open-meteo")
