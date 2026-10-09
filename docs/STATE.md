@@ -53,6 +53,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (monitors + number guard) | Claude | 118 passed | passed |
 | Fri 9 Oct 2026 (calibration note) | Claude | 125 passed | passed |
 | Fri 9 Oct 2026 (T19) | Claude | 138 passed | passed |
+| Fri 9 Oct 2026 (T23) | Claude | 144 passed | passed (+ vitest 4 passed) |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -82,7 +83,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE (minimal) | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
-| T23 | Resilience pass | Antigravity | T21 | TODO | |
+| T23 | Resilience pass | Antigravity | T21 | DONE | backend/tests/test_resilience.py: Open-Meteo, CPCB/OpenAQ, Gemini down one at a time and all together → 200 with honest mode/source/note. Frontend: `modeBanner()` (replay/fixture/cached) + vitest; error screen has Retry (never blank); empty timetable message. |
 | T24 | UI polish | Antigravity | T13–T16 | TODO | |
 | T25 | README | Any | T21 | TODO | |
 | T26 | Demo video | Human | T24 | TODO | |
@@ -114,6 +115,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Amplify (Claude): Git-connected app builds on every push (job 20 SUCCEED). Branch had no env vars, so `frontend/.env.production` now sets public `VITE_API_URL`. Live Ask fallback cause: Gemini 503 "high demand" (transient); deterministic fallback worked.
 - 2026-10-09 — Gemini reliability (Claude): Strands' built-in retry (6 attempts from 4 s) disabled via `retry_strategy=None`; our policy: retry 503/429/500/504/timeouts up to 2× (0.5 s, 1.5 s) within the 20 s budget, then `GEMINI_FALLBACK_MODEL_ID` (new SAM param `GeminiFallbackModelId`, default `gemini-3.8-flash-lite` — UNVERIFIED: GEMINI_API_KEY not in agent shell, human to check models list), then plan summary. Non-retryable (e.g. 404) skips to fallback model. Logs which model answered; /api/ask returns `model`.
 - 2026-10-09 — T19 (Claude): template env vars moved to `Globals.Function` (shared by ApiFunction + DailyFunction); output `DailyFunctionName`. Plan cache = `PlanCache` protocol in store.py (`JsonPlanCache` local at data/plan_cache.json, git-ignored; `DynamoPlanCache` stores body as JSON string). tests/conftest.py isolates the local cache.
+- 2026-10-09 — T23 (Claude): new frontend devDependency `vitest@3.2.4` (`npm test`) for `src/utils/banner.ts`. No backend code changes were needed — all failure scenarios already returned 200 with honest labels.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

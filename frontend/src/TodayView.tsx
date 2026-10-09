@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getDayPlan, REPLAY_KEY } from './api';
 import { DayPlan, PeriodPlan } from './types';
 import { getBandColor, getActionColor } from './utils/colors';
+import { modeBanner, BANNER_STYLE } from './utils/banner';
 import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
 
 /** e.g. "Class 7B PE 08:40 ⇄ Period 8 13:40 · AQI 351 → 127" */
@@ -16,10 +17,12 @@ export default function TodayView({
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const fetchPlan = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getDayPlan(activeSchoolId, replay ? REPLAY_KEY : undefined);
         setPlan(data);
@@ -30,7 +33,7 @@ export default function TodayView({
       }
     };
     fetchPlan();
-  }, [activeSchoolId, replay]);
+  }, [activeSchoolId, replay, retry]);
 
   if (loading) {
     return (
@@ -41,21 +44,27 @@ export default function TodayView({
   }
 
   if (error || !plan) {
+    // Never a blank screen: explain, offer a retry, and point to the recorded replay day.
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-4 text-center text-red-600">
-        {error || 'No plan available'}
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-slate-50 p-6 text-center">
+        <p className="text-red-600 font-semibold">{error || 'No plan available'}</p>
+        <p className="text-sm text-slate-500">The Saans server could not be reached. Follow your school's standard air-quality protocol meanwhile.</p>
+        <button onClick={() => setRetry((n) => n + 1)} className="text-sm font-bold text-white bg-blue-600 rounded-md px-4 py-2">Retry</button>
       </div>
     );
   }
 
   const { now, periods, sources } = plan;
+  const banner = modeBanner(plan);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200 relative">
-      {plan.mode === 'replay' && (
-        <div className="bg-purple-600 text-white px-5 py-2.5 text-sm font-semibold flex items-center justify-between gap-3" role="status">
-          <span>Replay: recorded data from {plan.replay_date ?? plan.date}</span>
-          <button onClick={() => setReplay(false)} className="text-xs underline underline-offset-2 shrink-0">Back to live</button>
+      {banner && (
+        <div className={`${BANNER_STYLE[banner.kind]} px-5 py-2.5 text-sm font-semibold flex items-center justify-between gap-3`} role="status">
+          <span>{banner.text}</span>
+          {banner.kind === 'replay' && (
+            <button onClick={() => setReplay(false)} className="text-xs underline underline-offset-2 shrink-0">Back to live</button>
+          )}
         </div>
       )}
       {/* Header Banner */}
@@ -102,6 +111,9 @@ export default function TodayView({
       <main className="px-5 mt-6 space-y-4 relative z-0">
         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Outdoor Schedule</h2>
         
+        {periods.length === 0 && (
+          <p className="text-sm text-slate-500">No periods in this school's timetable yet. Add them under Setup.</p>
+        )}
         {periods.map((p: PeriodPlan) => (
           <div key={p.period.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-md">
             {/* Top row: Time + Activity */}
