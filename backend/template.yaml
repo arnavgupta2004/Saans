@@ -16,10 +16,10 @@ Parameters:
     AllowedValues: [bedrock, gemini]
   GeminiModelId:
     Type: String
-    Default: gemini-3.8-flash
+    Default: gemini-3.5-flash-lite
   GeminiFallbackModelId:
     Type: String
-    Default: gemini-3.5-flash-lite
+    Default: gemini-3.1-flash-lite
     Description: Lighter Gemini model tried after the primary fails (empty = no fallback model)
   GeminiApiKey:
     Type: String
