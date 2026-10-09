@@ -60,51 +60,6 @@ def test_live_response_is_parsed_and_cached() -> None:
     assert c.latest_near(28.647, 77.316)["source"] == "live" and c.latest_near(28.647, 77.316)["source"] == "cached"
 
 
-def _aq(value, la, lo, local="2026-10-09T18:30:00+05:30", loc=1):
-    return {"value": value, "coordinates": {"latitude": la, "longitude": lo}, "datetime": {"utc": "2026-10-09T13:00:00Z", "local": local}, "locationsId": loc, "sensorsId": loc * 10}
-
-
-def test_openaq_picks_nearest_fresh_sensor_within_25km() -> None:
-    from datetime import datetime
-    from saans.sources import IST, parse_openaq_results
-    now = datetime(2026, 10, 9, 19, 0, tzinfo=IST)
-    results = [_aq(80, 28.80, 77.316, loc=1),            # ~17 km
-               _aq(60, 28.66, 77.316, loc=2),            # ~1.5 km, nearest
-               _aq(55, 28.65, 77.316, local="2026-10-09T10:00:00+05:30", loc=3),  # nearest but stale
-               _aq(-1, 28.647, 77.316, loc=4),           # invalid
-               _aq(70, 29.50, 77.316, loc=5)]            # >25 km
-    r = parse_openaq_results(results, 28.647, 77.316, now)
-    assert r["station"].endswith("2") and r["pm25"] == 60 and r["distance_km"] < 3 and r["provider"] == "openaq" and r["source"] == "live"
-    assert r["observed_at"] == "2026-10-09 18:30:00"
-
-
-def test_openaq_raises_with_reason_when_none_usable() -> None:
-    import pytest
-    from datetime import datetime
-    from saans.sources import IST, parse_openaq_results
-    with pytest.raises(RuntimeError, match="no fresh PM2.5"):
-        parse_openaq_results([_aq(60, 40.0, 70.0)], 28.647, 77.316, datetime(2026, 10, 9, 19, 0, tzinfo=IST))
-
-
-def test_openaq_client_requires_key_and_sends_header(monkeypatch) -> None:
-    import pytest
-    monkeypatch.delenv("OPENAQ_API_KEY", raising=False)
-    _Cache.values.clear()
-    from saans.sources import OpenAqClient
-    with pytest.raises(RuntimeError, match="OPENAQ_API_KEY"):
-        OpenAqClient(api_key=None).latest_near(1, 2)
-    seen = {}
-    def handler(req):
-        if not req.url.path.endswith("/latest"):
-            return httpx.Response(404)
-        seen["key"] = req.headers.get("x-api-key"); seen["q"] = dict(req.url.params)
-        from datetime import datetime
-        from saans.sources import IST
-        return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat())]})
-    r = OpenAqClient(api_key="abc", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
-    assert seen["key"] == "abc" and seen["q"]["radius"] == "25000" and r["pm25"] == 60
-
-
 def _patch_chain(monkeypatch, cpcb, openaq):
     import saans.forecast as fc
     monkeypatch.setattr(fc.OpenMeteoClient, "hourly", lambda self, la, lo, days=5: [{"time": "2026-10-09T09:00", "pm25": 50, "pm10": 60, "source": "live"}])
@@ -151,26 +106,75 @@ def test_cpcb_connect_timeout_is_3s() -> None:
     assert c.client.timeout.connect == 3
 
 
-def test_openaq_station_is_location_name(monkeypatch) -> None:
-    from datetime import datetime
-    from saans.sources import IST, OpenAqClient
-    monkeypatch.delenv("OPENAQ_API_KEY", raising=False); _Cache.values.clear()
+# --- OpenAQ: reference-grade monitors only, CPCB preferred ---
+def _loc(id_, name, la, lo, monitor=True, provider="CPCB", sensor=None):
+    return {"id": id_, "name": name, "isMonitor": monitor, "provider": {"id": 1, "name": provider},
+            "coordinates": {"latitude": la, "longitude": lo},
+            "sensors": [{"id": sensor or id_ * 10, "parameter": {"id": 2, "name": "pm25"}}, {"id": (sensor or id_ * 10) + 1, "parameter": {"id": 1, "name": "pm10"}}]}
+
+
+def _latest(sensor, value, local):
+    return {"datetime": {"utc": "x", "local": local}, "value": value, "sensorsId": sensor}
+
+
+def _openaq(locations, latest_by_loc, seen=None):
+    from saans.sources import OpenAqClient
     def handler(req):
-        if req.url.path.endswith("/latest"):
-            return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat(), loc=8118)]})
-        assert req.url.path == "/v3/locations/8118"
-        return httpx.Response(200, json={"results": [{"id": 8118, "name": "Anand Vihar, Delhi - DPCC"}]})
-    r = OpenAqClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
-    assert r["station"] == "Anand Vihar, Delhi - DPCC"
+        if seen is not None: seen.append((req.url.path, dict(req.url.params), req.headers.get("x-api-key")))
+        if req.url.path == "/v3/locations":
+            return httpx.Response(200, json={"results": locations})
+        loc = int(req.url.path.split("/")[3])
+        return httpx.Response(200, json={"results": latest_by_loc.get(loc, [])})
+    return OpenAqClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler)))
 
 
-def test_openaq_name_lookup_failure_keeps_reading(monkeypatch) -> None:
+def _fresh():
     from datetime import datetime
-    from saans.sources import IST, OpenAqClient
+    from saans.sources import IST
+    return datetime.now(IST).isoformat()
+
+
+def test_openaq_low_cost_sensor_nearer_is_ignored_monitor_chosen() -> None:
+    _Cache.values.clear(); seen = []
+    locs = [_loc(1, "Air Check", 28.650, 77.316, monitor=False, provider="AirGradient"),   # ~0.3 km, low-cost
+            _loc(2, "Anand Vihar, Delhi - DPCC", 28.700, 77.316)]                       # ~6 km, monitor
+    r = _openaq(locs, {1: [_latest(10, 999, _fresh())], 2: [_latest(20, 88, _fresh()), _latest(21, 300, _fresh())]}, seen).latest_near(28.647, 77.316)
+    assert r["pm25"] == 88 and r["station"] == "Anand Vihar, Delhi - DPCC (CPCB via OpenAQ)" and r["provider"] == "openaq"
+    path, params, key = seen[0]
+    assert path == "/v3/locations" and params["monitor"] == "true" and params["radius"] == "25000" and params["parameters_id"] == "2" and key == "k"
+
+
+def test_openaq_prefers_cpcb_over_nearer_other_monitor() -> None:
     _Cache.values.clear()
-    def handler(req):
-        if req.url.path.endswith("/latest"):
-            return httpx.Response(200, json={"results": [_aq(60, 28.66, 77.316, local=datetime.now(IST).isoformat(), loc=7)]})
-        return httpx.Response(500)
-    r = OpenAqClient(api_key="k", client=httpx.Client(transport=httpx.MockTransport(handler))).latest_near(28.647, 77.316)
-    assert r["pm25"] == 60 and r["station"] == "OpenAQ location 7"
+    locs = [_loc(3, "US Embassy", 28.650, 77.316, provider="AirNow"), _loc(4, "Vivek Vihar", 28.690, 77.316, provider="Central Pollution Control Board")]
+    r = _openaq(locs, {3: [_latest(30, 70, _fresh())], 4: [_latest(40, 90, _fresh())]}).latest_near(28.647, 77.316)
+    assert r["pm25"] == 90 and r["station"] == "Vivek Vihar (CPCB via OpenAQ)"
+
+
+def test_openaq_non_cpcb_monitor_label() -> None:
+    _Cache.values.clear()
+    r = _openaq([_loc(3, "US Embassy", 28.650, 77.316, provider="AirNow")], {3: [_latest(30, 70, _fresh())]}).latest_near(28.647, 77.316)
+    assert r["station"] == "US Embassy (reference monitor via OpenAQ)"
+
+
+def test_openaq_no_monitor_within_25km_raises() -> None:
+    import pytest
+    _Cache.values.clear()
+    locs = [_loc(1, "Air Check", 28.650, 77.316, monitor=False), _loc(2, "Far", 29.5, 77.316)]
+    with pytest.raises(RuntimeError, match="reference monitor"):
+        _openaq(locs, {1: [_latest(10, 50, _fresh())], 2: [_latest(20, 50, _fresh())]}).latest_near(28.647, 77.316)
+
+
+def test_openaq_stale_monitor_skipped_for_next_one() -> None:
+    _Cache.values.clear()
+    locs = [_loc(2, "Stale CPCB", 28.660, 77.316), _loc(5, "Fresh CPCB", 28.700, 77.316)]
+    r = _openaq(locs, {2: [_latest(20, 50, "2026-01-01T08:00:00+05:30")], 5: [_latest(50, 77, _fresh())]}).latest_near(28.647, 77.316)
+    assert r["pm25"] == 77 and r["station"].startswith("Fresh CPCB")
+
+
+def test_openaq_requires_key(monkeypatch) -> None:
+    import pytest
+    from saans.sources import OpenAqClient
+    monkeypatch.delenv("OPENAQ_API_KEY", raising=False); _Cache.values.clear()
+    with pytest.raises(RuntimeError, match="OPENAQ_API_KEY"):
+        OpenAqClient(api_key=None).latest_near(1, 2)

@@ -119,56 +119,61 @@ def load_replay(key: str) -> tuple[list[dict[str, Any]], str]:
     return [{"time": t, "pm25": a, "pm10": b, "source": "replay"} for t, a, b in zip(h["time"], h["pm2_5"], h["pm10"])], data["date"]
 
 
-OPENAQ_URL = "https://api.openaq.org/v3/parameters/2/latest"  # parameter 2 = PM2.5
 OPENAQ_LOCATIONS_URL = "https://api.openaq.org/v3/locations"
 OPENAQ_RADIUS_M = 25000
 OPENAQ_MAX_AGE_S = 2 * 3600
+OPENAQ_MAX_CANDIDATES = 5
+
+def _is_cpcb(location: dict[str, Any]) -> bool:
+    name = str((location.get("provider") or {}).get("name") or "").lower()
+    return "cpcb" in name or "central pollution control board" in name
+
+def rank_openaq_monitors(locations: list[dict[str, Any]], lat: float, lon: float) -> list[tuple[dict[str, Any], float, set[Any]]]:
+    """Reference-grade monitors (isMonitor) with a PM2.5 sensor within 25 km; CPCB first, then nearest.
+    Low-cost sensors are never used, even if the API returns them."""
+    ranked = []
+    for loc in locations:
+        if loc.get("isMonitor") is not True: continue
+        coords = loc.get("coordinates") or {}; la, lo = _num(coords.get("latitude")), _num(coords.get("longitude"))
+        sensors = {s.get("id") for s in loc.get("sensors") or [] if (s.get("parameter") or {}).get("id") == 2 or str((s.get("parameter") or {}).get("name", "")).lower() in _PM25}
+        if la is None or lo is None or not sensors: continue
+        distance = _distance(lat, lon, la, lo)
+        if distance <= OPENAQ_RADIUS_M / 1000: ranked.append((loc, distance, sensors))
+    return sorted(ranked, key=lambda x: (not _is_cpcb(x[0]), x[1]))
+
+def fresh_pm25(latest: list[dict[str, Any]], sensors: set[Any], now: datetime | None = None) -> tuple[float, datetime] | None:
+    """Latest PM2.5 value from this location's sensors if < 2 h old and a valid non-negative number."""
+    now = now or datetime.now(IST)
+    for row in latest:
+        if row.get("sensorsId") not in sensors: continue
+        value = _num(row.get("value")); stamp = (row.get("datetime") or {}).get("local") or (row.get("datetime") or {}).get("utc")
+        if value is None or value < 0 or not stamp: continue
+        try: observed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        except ValueError: continue
+        if observed.tzinfo is None: observed = observed.replace(tzinfo=IST)
+        if (now - observed).total_seconds() < OPENAQ_MAX_AGE_S: return value, observed
+    return None
 
 class OpenAqClient:
-    """Nearest OpenAQ v3 PM2.5 sensor within 25 km of the school, latest value (free API key)."""
+    """Nearest reference-grade PM2.5 monitor (CPCB preferred) within 25 km via OpenAQ v3 (free API key)."""
     def __init__(self, api_key: str | None = None, client: httpx.Client | None = None):
-        self.api_key, self.client = api_key or os.getenv("OPENAQ_API_KEY"), client or httpx.Client(timeout=15)
+        self.api_key, self.client = api_key or os.getenv("OPENAQ_API_KEY"), client or httpx.Client(timeout=httpx.Timeout(10, connect=3))
+    def _get(self, url: str, **params: Any) -> list[dict[str, Any]]:
+        response = self.client.get(url, headers={"X-API-Key": self.api_key}, params=params or None)
+        response.raise_for_status()
+        results = response.json().get("results")
+        if not isinstance(results, list): raise RuntimeError(f"OpenAQ: unexpected response shape from {url}")
+        return results
     def latest_near(self, lat: float, lon: float) -> dict[str, Any]:
         key = f"openaq:{lat}:{lon}"; cached = _Cache.get(key)
         if cached: return {**cached, "source": "cached", "age_s": round(_Cache.age(key))}
         if not self.api_key: raise RuntimeError("OPENAQ_API_KEY missing")
-        response = self.client.get(OPENAQ_URL, headers={"X-API-Key": self.api_key}, params={"coordinates": f"{lat},{lon}", "radius": OPENAQ_RADIUS_M, "limit": 1000})
-        response.raise_for_status()
-        results = response.json().get("results")
-        if not isinstance(results, list): raise RuntimeError("OpenAQ: unexpected response shape (no 'results' list)")
-        result = parse_openaq_results(results, lat, lon)
-        name = self._location_name(result.pop("location_id", None))
-        if name: result["station"] = name
-        return _Cache.put(key, result)
-    def _location_name(self, location_id: Any) -> str | None:
-        """Human-readable station name from /v3/locations/{id}; the reading is still used if this fails."""
-        if location_id is None: return None
-        key = f"openaq-name:{location_id}"; cached = _Cache.get(key)
-        if cached: return cached
-        try:
-            response = self.client.get(f"{OPENAQ_LOCATIONS_URL}/{location_id}", headers={"X-API-Key": self.api_key})
-            response.raise_for_status()
-            name = (response.json().get("results") or [{}])[0].get("name")
-        except Exception as exc:
-            logger.warning("OpenAQ location name lookup failed for %s: %s: %s", location_id, type(exc).__name__, exc); return None
-        return _Cache.put(key, str(name)) if name else None
-
-def parse_openaq_results(results: list[dict[str, Any]], lat: float, lon: float, now: datetime | None = None) -> dict[str, Any]:
-    """Pick the nearest fresh sensor reading (<2h old, ≤25 km, numeric non-negative value)."""
-    now = now or datetime.now(IST); best: tuple[float, dict[str, Any], datetime] | None = None
-    for row in results:
-        value = _num(row.get("value")); coords = row.get("coordinates") or {}
-        la, lo = _num(coords.get("latitude")), _num(coords.get("longitude"))
-        stamp = (row.get("datetime") or {}).get("local") or (row.get("datetime") or {}).get("utc")
-        if value is None or value < 0 or la is None or lo is None or not stamp: continue
-        try: observed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
-        except ValueError: continue
-        if observed.tzinfo is None: observed = observed.replace(tzinfo=IST)
-        distance = _distance(lat, lon, la, lo)
-        if distance > OPENAQ_RADIUS_M / 1000 or (now - observed).total_seconds() >= OPENAQ_MAX_AGE_S: continue
-        if best is None or distance < best[0]: best = (distance, row, observed)
-    if best is None: raise RuntimeError(f"OpenAQ: no fresh PM2.5 sensor within 25 km in {len(results)} results")
-    distance, row, observed = best
-    return {"station": f"OpenAQ location {row.get('locationsId', row.get('sensorsId', '?'))}", "distance_km": round(distance, 2), "pm25": _num(row["value"]), "pm10": None,
-            "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq",
-            "location_id": row.get("locationsId")}
+        locations = self._get(OPENAQ_LOCATIONS_URL, coordinates=f"{lat},{lon}", radius=OPENAQ_RADIUS_M, monitor="true", parameters_id=2, limit=100)
+        for loc, distance, sensors in rank_openaq_monitors(locations, lat, lon)[:OPENAQ_MAX_CANDIDATES]:
+            reading = fresh_pm25(self._get(f"{OPENAQ_LOCATIONS_URL}/{loc['id']}/latest"), sensors)
+            if not reading: continue
+            value, observed = reading
+            label = "CPCB via OpenAQ" if _is_cpcb(loc) else "reference monitor via OpenAQ"
+            return _Cache.put(key, {"station": f"{loc.get('name') or 'OpenAQ location ' + str(loc['id'])} ({label})", "distance_km": round(distance, 2), "pm25": value, "pm10": None,
+                                    "observed_at": observed.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"), "source": "live", "age_s": 0, "provider": "openaq"})
+        raise RuntimeError(f"OpenAQ: no reference monitor with fresh PM2.5 within 25 km ({len(locations)} locations returned)")

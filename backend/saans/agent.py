@@ -1,21 +1,38 @@
-"""Strands agent. Tools return planner output; the LLM only explains it."""
+"""Strands agent. Tools return planner output; the LLM only explains it, and every number it states is checked."""
 from __future__ import annotations
 
+import json
+import logging
 import os
+import re
+from typing import Any, Callable
 
 from .forecast import load_forecast
-from .notices import build_notice
+from .models import DayPlan
+from .notices import BAND_HI, build_notice
 from .planner import best_day, plan_day
+from .sources import load_replay
 from .store import get_store
 
+logger = logging.getLogger(__name__)
+
 SYSTEM_PROMPT = (
-    "You are Saans, an assistant for school air-safety in India. Only state AQI numbers that a tool "
-    "returned, and cite the source and time. Safety actions come from get_day_plan; never override or "
-    "soften them. If unsure, say so. Answer in the user's language (English or Hindi). Be brief."
+    "You are Saans, an assistant for school air-safety in India. "
+    "Data provenance: the hourly forecast comes from Open-Meteo (CAMS model). When a plan says it is calibrated, "
+    "it was bias-corrected with the latest reading from the named monitoring station (sources.station). "
+    "Never call it a \"station forecast\": stations give current readings, Open-Meteo gives the forecast. "
+    "Always state the forecast time or date and whether it is calibrated (and with which station) or uncalibrated. "
+    "If the plan mode is 'replay', say it is recorded data from replay_date, not today. "
+    "Only state AQI values, times, and counts that a tool returned; never estimate or compute new numbers. "
+    "Safety actions and swaps come from get_day_plan; never override or soften them. If unsure, say so. "
+    "Answer in the user's language (English or Hindi). Be brief."
 )
 
 
-def _forecast(school):
+def _forecast(school, replay: str | None = None):
+    if replay:
+        rows, _ = load_replay(replay)
+        return rows, {"forecast": "recorded", "observation": "none"}
     rows, src, _ = load_forecast(school)
     return rows, src
 
@@ -27,42 +44,89 @@ def _school(school_id: str):
     return school
 
 
-def get_school(school_id: str) -> dict:
-    """Return the school profile and timetable."""
-    return _school(school_id).model_dump()
+def make_tools(replay: str | None = None, sink: list | None = None) -> list[Callable]:
+    """Agent tools bound to one request's context (live or a replay key). Every output is recorded in `sink`
+    so the answer's numbers can be checked against exactly what the model saw."""
+    def _out(value):
+        if sink is not None:
+            sink.append(value)
+        return value
+
+    def _plan(school_id: str, date: str = "") -> DayPlan:
+        school = _school(school_id)
+        rows, src = _forecast(school, replay)
+        day = date or rows[0]["time"][:10]
+        if replay:
+            return plan_day(school, rows, day, src, "replay", replay_date=rows[0]["time"][:10])
+        return plan_day(school, rows, day, src)
+
+    def get_school(school_id: str) -> dict:
+        """Return the school profile and timetable."""
+        return _out(_school(school_id).model_dump())
+
+    def get_day_plan(school_id: str, date: str = "") -> dict:
+        """Return the deterministic per-period AQI plan (actions, swaps) for a date (YYYY-MM-DD, default today)."""
+        return _out(_plan(school_id, date).model_dump())
+
+    def get_hourly_forecast(school_id: str, date: str = "") -> list[dict]:
+        """Return calibrated hourly PM2.5/PM10 forecast points for a date."""
+        rows, _ = _forecast(_school(school_id), replay)
+        d = date or rows[0]["time"][:10]
+        return _out([r for r in rows if r["time"].startswith(d)])
+
+    def find_best_day(school_id: str, start: str = "09:00", end: str = "12:00") -> dict:
+        """Rank the coming days by worst calibrated AQI inside the HH:MM window."""
+        school = _school(school_id)
+        rows, _ = _forecast(school, replay)
+        return _out(best_day(school, rows, start, end))
+
+    def draft_notice(school_id: str, date: str = "", lang: str = "en") -> dict:
+        """Return the deterministic parent notice text and WhatsApp URL."""
+        return _out(build_notice(_plan(school_id, date), lang))
+
+    return [get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice]
 
 
-def get_day_plan(school_id: str, date: str = "") -> dict:
-    """Return the deterministic per-period AQI plan (actions, swaps) for a date (YYYY-MM-DD, default today)."""
-    school = _school(school_id)
-    rows, src = _forecast(school)
-    return plan_day(school, rows, date or rows[0]["time"][:10], src).model_dump()
+TOOLS = make_tools()
+get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice = TOOLS
+
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
-def get_hourly_forecast(school_id: str, date: str = "") -> list[dict]:
-    """Return calibrated hourly PM2.5/PM10 forecast points for a date."""
-    rows, _ = _forecast(_school(school_id))
-    d = date or rows[0]["time"][:10]
-    return [r for r in rows if r["time"].startswith(d)]
+def _numbers(text: str) -> set[float]:
+    return {float(n) for n in _NUMBER.findall(text)}
 
 
-def find_best_day(school_id: str, start: str = "09:00", end: str = "12:00") -> dict:
-    """Rank the coming days by worst calibrated AQI inside the HH:MM window."""
-    rows, _ = _forecast(_school(school_id))
-    return best_day(_school(school_id), rows, start, end)
+def unverified_numbers(answer: str, context: list[str], minimum: float = 20) -> list[float]:
+    """Numbers >= `minimum` in the answer that appear nowhere in the context (tool outputs, question, school)."""
+    allowed: set[float] = set().union(*(_numbers(c) for c in context)) if context else set()
+    seen: list[float] = []
+    for n in _NUMBER.findall(answer):
+        value = float(n)
+        if value >= minimum and value not in allowed and value not in seen:
+            seen.append(value)
+    return seen
 
 
-def draft_notice(school_id: str, date: str = "", lang: str = "en") -> dict:
-    """Return the deterministic parent notice text and WhatsApp URL."""
-    return build_notice(DayPlanAdapter(school_id, date), lang)
-
-
-def DayPlanAdapter(school_id: str, date: str):
-    from .models import DayPlan
-    return DayPlan(**get_day_plan(school_id, date))
-
-
-TOOLS = [get_school, get_day_plan, get_hourly_forecast, find_best_day, draft_notice]
+def deterministic_answer(school_id: str, lang: str = "en", replay: str | None = None) -> dict:
+    """Plan summary straight from the planner (no LLM): every number comes from the DayPlan."""
+    get_plan = make_tools(replay)[1]
+    plan = DayPlan(**get_plan(school_id))
+    hi = lang == "hi"
+    when = f"recorded data from {plan.replay_date}" if plan.mode == "replay" else f"{plan.date}, {plan.mode} forecast"
+    if hi:
+        when = f"{plan.replay_date} का रिकॉर्ड किया गया डेटा" if plan.mode == "replay" else f"{plan.date}, {plan.mode} पूर्वानुमान"
+    lines = [("आज की योजना" if hi else "Today's plan") + f" ({when}):"]
+    for p in plan.periods:
+        if not p.period.outdoor:
+            continue
+        band = BAND_HI.get(p.band, p.band) if hi else p.band
+        text = p.action.text_hi if hi else p.action.text_en
+        line = f"• {p.period.label} {p.period.start}–{p.period.end}: AQI {p.aqi} ({band}) — {text}"
+        if p.swap:
+            line += f" ⇄ {p.swap.with_label} {p.swap.to_start} (AQI {p.swap.to_aqi})"
+        lines.append(line)
+    return {"answer": "\n".join(lines), "tools_used": [], "verified": False, "fallback": True}
 
 
 def _env(name: str) -> str:
@@ -81,11 +145,24 @@ def _model():
     return BedrockModel(model_id=_env("BEDROCK_MODEL_ID"), region_name=os.getenv("AWS_REGION", "us-east-1"))
 
 
-def ask(school_id: str, question: str, lang: str = "en") -> dict:
-    """Run the Strands agent. Raises on model failure; caller logs and falls back."""
+def _run_agent(tools: list[Callable], prompt: str) -> tuple[str, list[str]]:
     from strands import Agent, tool
 
-    agent = Agent(model=_model(), system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in TOOLS])
-    result = agent(f"[school_id={school_id}] [lang={lang}] {question}")
-    used = [name for name in getattr(result.metrics, "tool_metrics", {}) or {}]
-    return {"answer": str(result), "tools_used": used}
+    agent = Agent(model=_model(), system_prompt=SYSTEM_PROMPT, tools=[tool(f) for f in tools])
+    result = agent(prompt)
+    return str(result), [name for name in getattr(result.metrics, "tool_metrics", {}) or {}]
+
+
+def ask(school_id: str, question: str, lang: str = "en", replay: str | None = None) -> dict:
+    """Run the Strands agent in the screen's context (live or replay). Raises on model failure; caller logs and falls back.
+    Number guard: any number >= 20 not found in this request's tool outputs, the question, or the school profile
+    makes us return the deterministic answer instead."""
+    sink: list[Any] = []
+    context = f"[school_id={school_id}] [lang={lang}]" + (f" [context: recorded replay day '{replay}', not today]" if replay else "")
+    answer, used = _run_agent(make_tools(replay, sink), f"{context} {question}")
+    evidence = [json.dumps(x, default=str, ensure_ascii=False) for x in sink] + [question, json.dumps(_school(school_id).model_dump())]
+    bad = unverified_numbers(answer, evidence)
+    if bad:
+        logger.warning("Agent answer had numbers not in tool outputs %s; returning deterministic answer. Answer was: %r", bad, answer)
+        return deterministic_answer(school_id, lang, replay)
+    return {"answer": answer, "tools_used": used, "verified": True}

@@ -103,20 +103,30 @@ class AskRequest(BaseModel):
     school_id: str
     question: str
     lang: Literal["en", "hi"] = "en"
+    replay: str | None = None
 
 
 @app.post("/api/ask")
 def ask(request: AskRequest) -> dict:
     _school_or_404(request.school_id)
+    if request.replay:
+        try:
+            load_replay(request.replay)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=f"Unknown replay '{request.replay}'") from exc
+    from saans import agent
     try:
-        from saans.agent import ask as agent_ask
-        return agent_ask(request.school_id, request.question, request.lang)
+        return agent.ask(request.school_id, request.question, request.lang, replay=request.replay)
     except Exception:
         logger.exception("Agent failed for school %s; returning deterministic fallback", request.school_id)
-        answer = "Saans' assistant is unavailable right now. Please use today's deterministic safety plan."
-        if request.lang == "hi":
-            answer = "Saans सहायक अभी उपलब्ध नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"
-        return {"answer": answer, "tools_used": []}
+    try:
+        return agent.deterministic_answer(request.school_id, request.lang, request.replay)
+    except Exception:
+        logger.exception("Deterministic answer failed for school %s", request.school_id)
+    answer = "Saans' assistant is unavailable right now. Please use today's deterministic safety plan."
+    if request.lang == "hi":
+        answer = "Saans सहायक अभी उपलब्ध नहीं है। कृपया आज की निर्धारित सुरक्षा योजना देखें।"
+    return {"answer": answer, "tools_used": [], "verified": False, "fallback": True}
 
 
 handler = Mangum(app)

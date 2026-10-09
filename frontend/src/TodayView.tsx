@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getDayPlan } from './api';
+import { getDayPlan, REPLAY_KEY } from './api';
 import { DayPlan, PeriodPlan } from './types';
 import { getBandColor, getActionColor } from './utils/colors';
 import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
@@ -8,17 +8,20 @@ import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide
 const swapText = (p: PeriodPlan) =>
   `${p.period.label} ${p.period.start} ⇄ ${p.swap?.with_label ?? 'slot'} ${p.swap?.to_start} · AQI ${p.aqi} → ${p.swap?.to_aqi}`;
 
-export default function TodayView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
+export default function TodayView({
+  activeSchoolId = 'delhi-anand-vihar',
+  replay = false,
+  setReplay = () => {},
+}: { activeSchoolId?: string; replay?: boolean; setReplay?: (v: boolean) => void }) {
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [replay, setReplay] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
       setLoading(true);
       try {
-        const data = await getDayPlan(activeSchoolId, replay ? 'delhi-nov' : undefined);
+        const data = await getDayPlan(activeSchoolId, replay ? REPLAY_KEY : undefined);
         setPlan(data);
       } catch (err) {
         setError('Could not load plan');

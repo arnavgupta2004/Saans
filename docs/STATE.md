@@ -50,6 +50,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (fix commit) | Claude | 75 passed | not run |
 | Fri 9 Oct 2026 (OpenAQ commit) | Claude | 94 passed | passed |
 | Fri 9 Oct 2026 (swap exchange / sources / README) | Claude | 106 passed | passed |
+| Fri 9 Oct 2026 (monitors + number guard) | Claude | 118 passed | passed |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -76,7 +77,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
 | T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
 | T19 | Daily EventBridge job | Cursor | T12 | TODO | |
-| T20 | Frontend Ask Saans chat | Antigravity | T18 | TODO | cut #1 if late |
+| T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE (minimal) | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
 | T23 | Resilience pass | Antigravity | T21 | TODO | |
@@ -102,6 +103,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Model ids from env only (Claude): live error 404 "models/gemini-2.5-flash is no longer available to new users". `GeminiModelId` SAM param (default gemini-3.8-flash) → `GEMINI_MODEL_ID`; `BEDROCK_MODEL_ID` likewise required from env. No model names in code; missing env → RuntimeError → logged + deterministic fallback.
 - 2026-10-09 — Sources (Claude): data.gov.in refuses connections from AWS (ConnectError 111) → CPCB client connect timeout 3 s (read 10 s); chain unchanged CPCB → OpenAQ → uncalibrated. OpenAQ `sources.station` = location `name` via `GET /v3/locations/{id}` (cached; falls back to "OpenAQ location <id>" if lookup fails).
 - 2026-10-09 — Live verification (Claude): OpenAQ picked station "Air Check" (8.42 km) — possibly a low-cost/community sensor, not a CPCB reference monitor; README says "CPCB station data via OpenAQ". Consider restricting OpenAQ to reference monitors (locations `monitor=true` / CPCB provider). Agent phrased the source as "Air Check station forecast" (it is an Open-Meteo forecast calibrated with that station) — SYSTEM_PROMPT could be tightened.
+- 2026-10-09 — Reference monitors + grounded Ask (Claude): (1) OpenAQ now `GET /v3/locations?coordinates&radius=25000&monitor=true&parameters_id=2`, client-side `isMonitor is True` too (low-cost sensors like "Air Check" never used), CPCB provider ("CPCB"/"Central Pollution Control Board") preferred then nearest, latest via `/v3/locations/{id}/latest` (fresh < 2h); none within 25 km → uncalibrated. station = "<name> (CPCB via OpenAQ)" or "<name> (reference monitor via OpenAQ)". (2) SYSTEM_PROMPT: Open-Meteo (CAMS) forecast calibrated with the named station's latest reading; never "station forecast"; always state time + calibrated or not; replay = recorded data. (3) `/api/ask` accepts `replay`; tools are built per request (`make_tools(replay, sink)`) so every tool uses the screen's context; unknown replay → 404. (4) Number guard: every number ≥ 20 in the answer must appear in that request's tool outputs, the question, or the school profile; otherwise logger.warning + deterministic plan summary (`deterministic_answer`). Response adds `verified` (and `fallback` when deterministic). Model failure now also returns the deterministic plan summary instead of a generic message.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

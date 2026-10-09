@@ -75,3 +75,26 @@ def test_unknown_replay_is_404() -> None:
 def test_live_plan_has_no_replay_date(monkeypatch) -> None:
     monkeypatch.setattr(api, "_forecast", lambda school: (_rows(), {"forecast": "live", "observation": "none"}, "live"))
     assert TestClient(api.app).get("/api/schools/delhi-anand-vihar/today").json()["replay_date"] is None
+
+
+
+def test_ask_passes_replay_and_returns_verified(monkeypatch) -> None:
+    import saans.agent as agent
+    seen = {}
+    def fake(school_id, question, lang="en", replay=None):
+        seen["replay"] = replay
+        return {"answer": "ok", "tools_used": [], "verified": True}
+    monkeypatch.setattr(agent, "ask", fake)
+    r = TestClient(api.app).post("/api/ask", json={"school_id": "delhi-anand-vihar", "question": "x", "replay": "delhi-nov"})
+    assert seen["replay"] == "delhi-nov" and r.json()["verified"] is True
+
+
+def test_ask_unknown_replay_404() -> None:
+    assert TestClient(api.app).post("/api/ask", json={"school_id": "delhi-anand-vihar", "question": "x", "replay": "nope"}).status_code == 404
+
+
+def test_ask_agent_failure_returns_deterministic_plan(monkeypatch) -> None:
+    import saans.agent as agent
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("404 model gone")))
+    r = TestClient(api.app).post("/api/ask", json={"school_id": "delhi-anand-vihar", "question": "x", "replay": "delhi-nov"}).json()
+    assert r["verified"] is False and r["fallback"] is True and "351" in r["answer"]

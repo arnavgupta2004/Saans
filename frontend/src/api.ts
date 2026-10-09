@@ -7,6 +7,8 @@ import mockNoticeEn from './mock/notice_en.json';
 import mockNoticeHi from './mock/notice_hi.json';
 
 const USE_MOCK = false;
+/** Recorded severe-air day served by the backend (Delhi, 19 Nov 2025). */
+export const REPLAY_KEY = 'delhi-nov';
 const API_URL = `${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')}/api`;
 
 export const getDayPlan = async (schoolId: string, replay?: string): Promise<DayPlan> => {
@@ -65,5 +67,24 @@ export const getNotice = async (schoolId: string, lang: 'en' | 'hi') => {
   }
   const response = await fetch(`${API_URL}/schools/${schoolId}/notice?lang=${lang}&polish=false`);
   if (!response.ok) throw new Error('Failed to fetch notice');
+  return response.json();
+};
+
+export interface AskResponse {
+  answer: string;
+  tools_used: string[];
+  /** true = every number >= 20 in the answer was found in this request's planner/tool outputs */
+  verified: boolean;
+  /** true = the deterministic plan summary was returned instead of the model's answer */
+  fallback?: boolean;
+}
+
+export const askSaans = async (schoolId: string, question: string, lang: 'en' | 'hi', replay?: string): Promise<AskResponse> => {
+  const response = await fetch(`${API_URL}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ school_id: schoolId, question, lang, ...(replay ? { replay } : {}) }),
+  });
+  if (!response.ok) throw new Error('Failed to ask Saans');
   return response.json();
 };

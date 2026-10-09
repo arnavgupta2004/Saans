@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TodayView from './TodayView';
 import WeekView from './WeekView';
 import NoticeView from './NoticeView';
+import AskView from './AskView';
 import OnboardingView from './OnboardingView';
 import { LanguageProvider, useLanguage } from './LanguageContext';
 import { Calendar, MessageSquare, Bell, CalendarDays, Globe, Settings } from 'lucide-react';
@@ -16,16 +17,17 @@ const DEMO_SCHOOLS = [
 function AppContent() {
   const [tab, setTab] = useState<'today' | 'week' | 'notice' | 'ask' | 'setup'>('today');
   const [activeSchoolId, setActiveSchoolId] = useState(DEMO_SCHOOLS[0].id);
+  const [replay, setReplay] = useState(false); // shared by Today and Ask so both use the same context
   const { lang, setLang, t } = useLanguage();
 
   const renderContent = () => {
     switch (tab) {
-      case 'today': return <TodayView activeSchoolId={activeSchoolId} />;
+      case 'today': return <TodayView activeSchoolId={activeSchoolId} replay={replay} setReplay={setReplay} />;
       case 'week': return <WeekView activeSchoolId={activeSchoolId} />;
       case 'notice': return <NoticeView activeSchoolId={activeSchoolId} />;
       case 'setup': return <OnboardingView activeSchoolId={activeSchoolId} onSave={(s: School) => console.log('Saved', s)} />;
-      case 'ask': return <div className="flex h-screen items-center justify-center bg-slate-50"><p className="text-slate-500 font-bold">Ask Saans (Coming Soon)</p></div>;
-      default: return <TodayView activeSchoolId={activeSchoolId} />;
+      case 'ask': return <AskView activeSchoolId={activeSchoolId} replay={replay} />;
+      default: return <TodayView activeSchoolId={activeSchoolId} replay={replay} setReplay={setReplay} />;
     }
   };
 
