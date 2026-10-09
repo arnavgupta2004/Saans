@@ -25,5 +25,5 @@ export function modeBanner(plan: Pick<DayPlan, 'mode' | 'date' | 'generated_at' 
 export const BANNER_STYLE: Record<BannerKind, string> = {
   replay: 'bg-purple-600 text-white',
   fixture: 'bg-amber-500 text-white',
-  cached: 'bg-slate-700 text-white',
+  cached: 'bg-stone-200 text-stone-800',
 };

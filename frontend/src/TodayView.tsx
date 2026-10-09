@@ -1,203 +1,170 @@
 import React, { useEffect, useState } from 'react';
 import { getDayPlan, REPLAY_KEY } from './api';
 import { DayPlan, PeriodPlan } from './types';
-import { getBandColor, getActionColor } from './utils/colors';
+import { getBandTextColor, getBandColor } from './utils/colors';
 import { modeBanner, BANNER_STYLE } from './utils/banner';
-import { Clock, AlertTriangle, ArrowRightLeft, Wind, MapPin, Info } from 'lucide-react';
+import { aqiDisplay, bandLabel, outdoorPeriods, swapText, verdict } from './utils/plan';
+import { useLanguage, TKey } from './LanguageContext';
+import { CheckCircle2, AlertTriangle, Home, ArrowLeftRight, HeartPulse, Info, Clock, BookOpen } from 'lucide-react';
 
-/** e.g. "Class 7B PE 08:40 ⇄ Period 8 13:40 · AQI 351 → 127" */
-const swapText = (p: PeriodPlan) =>
-  `${p.period.label} ${p.period.start} ⇄ ${p.swap?.with_label ?? 'slot'} ${p.swap?.to_start} · AQI ${p.aqi} → ${p.swap?.to_aqi}`;
+const LEVEL = {
+  go: { icon: CheckCircle2, ring: 'text-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-900' },
+  caution: { icon: AlertTriangle, ring: 'text-amber-600', bg: 'bg-amber-50', text: 'text-amber-900' },
+  indoors: { icon: Home, ring: 'text-rose-600', bg: 'bg-rose-50', text: 'text-rose-900' },
+} as const;
+
+function PeriodCard({ p, lang, t }: { p: PeriodPlan; lang: 'en' | 'hi'; t: (k: TKey) => string }) {
+  const L = LEVEL[p.action.level];
+  const Icon = L.icon;
+  const hi = lang === 'hi';
+  return (
+    <article data-testid="period-card" className="bg-white rounded-2xl border border-stone-200/80 overflow-hidden">
+      <div className="px-4 pt-3.5 pb-3 flex items-start gap-3">
+        <Icon className={`w-6 h-6 shrink-0 mt-0.5 ${L.ring}`} strokeWidth={2.2} aria-label={p.action.level} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-semibold text-stone-900 truncate">{p.period.label}</h3>
+            <span className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-semibold ${getBandColor(p.band)}`}>AQI {p.aqi}</span>
+          </div>
+          <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
+            <Clock className="w-3 h-3" /> {p.period.start}–{p.period.end} · {bandLabel(p.band, lang)}
+          </p>
+          <p className={`mt-2 text-[15px] leading-snug font-medium ${L.text}`}>{hi ? p.action.text_hi : p.action.text_en}</p>
+          {p.sensitive_action.level !== 'go' && (
+            <p className="mt-1.5 text-[13px] text-stone-600 flex gap-1.5">
+              <HeartPulse className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
+              <span><span className="font-medium">{t('studentsAsthma')}:</span> {hi ? p.sensitive_action.text_hi : p.sensitive_action.text_en}</span>
+            </p>
+          )}
+        </div>
+      </div>
+      {p.swap && (p.swap.optional ? (
+        <div className="px-4 py-2.5 bg-stone-50 border-t border-stone-200/80 text-[13px] text-stone-600 flex items-start gap-2">
+          <ArrowLeftRight className="w-4 h-4 mt-0.5 shrink-0 text-stone-400" />
+          <span><span className="font-medium">{t('betterSlot')}</span> · {swapText(p)}</span>
+        </div>
+      ) : (
+        <div className="px-4 py-3 bg-sky-50 border-t border-sky-100 flex items-start gap-2.5">
+          <ArrowLeftRight className="w-5 h-5 mt-0.5 shrink-0 text-sky-700" />
+          <div>
+            <p className="text-[11px] uppercase tracking-wide font-semibold text-sky-700">{t('suggestedSwap')}</p>
+            <p className="text-sm font-semibold text-sky-950">{swapText(p)}</p>
+          </div>
+        </div>
+      ))}
+    </article>
+  );
+}
 
 export default function TodayView({
   activeSchoolId = 'delhi-anand-vihar',
   replay = false,
   setReplay = () => {},
 }: { activeSchoolId?: string; replay?: boolean; setReplay?: (v: boolean) => void }) {
+  const { lang, t } = useLanguage();
   const [plan, setPlan] = useState<DayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    const fetchPlan = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getDayPlan(activeSchoolId, replay ? REPLAY_KEY : undefined);
-        setPlan(data);
-      } catch (err) {
-        setError('Could not load plan');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPlan();
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getDayPlan(activeSchoolId, replay ? REPLAY_KEY : undefined)
+      .then((d) => { if (!cancelled) setPlan(d); })
+      .catch(() => { if (!cancelled) setError('Could not load plan'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [activeSchoolId, replay, retry]);
 
-  if (loading) {
+  if (loading && !plan) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="px-4 pt-6 space-y-3 animate-pulse" aria-busy="true">
+        <div className="h-36 rounded-3xl bg-stone-200/70" />
+        <div className="h-24 rounded-2xl bg-stone-200/60" />
+        <div className="h-24 rounded-2xl bg-stone-200/50" />
       </div>
     );
   }
 
   if (error || !plan) {
-    // Never a blank screen: explain, offer a retry, and point to the recorded replay day.
+    // Never a blank screen: explain, offer a retry.
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-slate-50 p-6 text-center">
-        <p className="text-red-600 font-semibold">{error || 'No plan available'}</p>
-        <p className="text-sm text-slate-500">The Saans server could not be reached. Follow your school's standard air-quality protocol meanwhile.</p>
-        <button onClick={() => setRetry((n) => n + 1)} className="text-sm font-bold text-white bg-blue-600 rounded-md px-4 py-2">Retry</button>
+      <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
+        <p className="text-rose-700 font-semibold">{error || 'No plan available'}</p>
+        <p className="text-sm text-stone-500">The Saans server could not be reached. Follow your school's standard air-quality protocol meanwhile.</p>
+        <button onClick={() => setRetry((n) => n + 1)} className="text-sm font-semibold text-white bg-stone-900 rounded-lg px-4 py-2">Retry</button>
       </div>
     );
   }
 
-  const { now, periods, sources } = plan;
+  const { now, sources } = plan;
   const banner = modeBanner(plan);
+  const v = verdict(plan, lang);
+  const outdoor = outdoorPeriods(plan);
+  const indoorCount = plan.periods.length - outdoor.length;
+  const shown = now ? aqiDisplay(now) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200 relative">
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       {banner && (
-        <div className={`${BANNER_STYLE[banner.kind]} px-5 py-2.5 text-sm font-semibold flex items-center justify-between gap-3`} role="status">
+        <div className={`${BANNER_STYLE[banner.kind]} px-4 py-2.5 text-sm font-medium flex items-center justify-between gap-3`} role="status">
           <span>{banner.text}</span>
           {banner.kind === 'replay' && (
-            <button onClick={() => setReplay(false)} className="text-xs underline underline-offset-2 shrink-0">Back to live</button>
+            <button onClick={() => setReplay(false)} className="text-xs underline underline-offset-2 shrink-0">{t('backToLive')}</button>
           )}
         </div>
       )}
-      {/* Header Banner */}
-      <header className="bg-white px-5 pt-6 pb-5 rounded-b-3xl shadow-sm relative z-10">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Today at School</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1 flex items-center">
-              <MapPin className="w-3 h-3 mr-1 inline" /> 
-              {plan.date} • Delhi
-            </p>
+
+      {/* Hero: air now + verdict */}
+      <section className="px-4 pt-5">
+        <div className="bg-white rounded-3xl border border-stone-200/80 px-5 pt-4 pb-5">
+          <div className="flex items-center justify-between text-xs text-stone-500">
+            <span>{t('airNow')}{now ? ` · ${now.time.slice(11, 16)}` : ''}</span>
+            <span>{plan.mode === 'replay' ? plan.replay_date : plan.date}</span>
           </div>
-          {plan.mode === 'replay' && (
-            <span className="bg-purple-100 text-purple-700 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full">
-              Replay
-            </span>
+          {now && shown ? (
+            <div className="mt-1 flex items-baseline gap-3">
+              <span className={`text-6xl font-semibold tracking-tight tabular-nums ${getBandTextColor(now.band)}`}>{shown.value}</span>
+              <span className={`text-lg font-medium ${getBandTextColor(now.band)}`}>{bandLabel(now.band, lang)}</span>
+            </div>
+          ) : (
+            <p className="mt-2 text-stone-500">—</p>
           )}
+          {shown?.beyond && <p className="text-xs text-stone-500 mt-0.5">{shown.beyond}</p>}
+          <p className={`mt-3 text-base font-semibold ${v.tone === 'indoors' ? 'text-rose-700' : v.tone === 'caution' ? 'text-amber-700' : 'text-emerald-700'}`}>{v.text}</p>
         </div>
-
-        {/* Current AQI Hero */}
-        {now && (
-          <div className={`mt-2 p-5 rounded-2xl flex items-center justify-between ${getBandColor(now.band)} shadow-sm`}>
-            <div>
-              <p className="text-sm font-semibold opacity-90 uppercase tracking-wide">Current Air Quality</p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-5xl font-black tracking-tighter">{now.aqi}</span>
-                <span className="text-lg font-bold opacity-90">{now.band}</span>
-              </div>
-            </div>
-            <Wind className="w-12 h-12 opacity-80" />
+        {!replay && (
+          <div className="mt-2 text-right">
+            <button onClick={() => setReplay(true)} className="text-xs font-medium text-violet-700 underline underline-offset-2">{t('tryBadAir')}</button>
           </div>
         )}
-      </header>
+      </section>
 
-      {!replay && (
-        <div className="px-5 mt-4 text-right">
-          <button onClick={() => setReplay(true)} className="text-xs font-semibold text-purple-700 underline underline-offset-2">
-            Try a bad-air day
-          </button>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <main className="px-5 mt-6 space-y-4 relative z-0">
-        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Outdoor Schedule</h2>
-        
-        {periods.length === 0 && (
-          <p className="text-sm text-slate-500">No periods in this school's timetable yet. Add them under Setup.</p>
+      {/* Outdoor activities */}
+      <section className="px-4 mt-4 space-y-3">
+        <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">{t('outdoorActivities')}</h2>
+        {plan.periods.length === 0 && <p className="text-sm text-stone-500">No periods in this school's timetable yet. Add them under Setup.</p>}
+        {outdoor.map((p) => <PeriodCard key={p.period.id} p={p} lang={lang} t={t} />)}
+        {indoorCount > 0 && (
+          <p className="flex items-center gap-2 text-sm text-stone-500 px-1">
+            <BookOpen className="w-4 h-4" /> {indoorCount} {t('indoorClasses')}
+          </p>
         )}
-        {periods.map((p: PeriodPlan) => (
-          <div key={p.period.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-md">
-            {/* Top row: Time + Activity */}
-            <div className="px-4 pt-4 pb-3 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-slate-900 text-lg">{p.period.label}</h3>
-                <p className="text-slate-500 text-sm flex items-center mt-0.5 font-medium">
-                  <Clock className="w-3.5 h-3.5 mr-1.5" />
-                  {p.period.start} - {p.period.end}
-                </p>
-              </div>
-              <div className="flex flex-col items-end">
-                <div className={`px-2.5 py-1 rounded-lg text-sm font-bold shadow-sm ${getBandColor(p.band)}`}>
-                  AQI {p.aqi}
-                </div>
-              </div>
-            </div>
+      </section>
 
-            {/* Action Box */}
-            <div className={`px-4 py-3 border-t ${getActionColor(p.action.level)}`}>
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 opacity-80" />
-                <div>
-                  <p className="font-bold text-[15px]">{p.action.text_en}</p>
-                  <p className="text-xs opacity-75 mt-1 font-medium flex items-center">
-                    <Info className="w-3 h-3 mr-1 inline" /> 
-                    Why: Forecast is {p.band} ({p.aqi}) during this hour.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Sensitive Action */}
-            {p.sensitive_action && (
-              <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
-                <p className="text-sm font-medium flex items-start gap-2 text-slate-700">
-                  <span className="text-rose-500 font-bold shrink-0 mt-0.5">•</span>
-                  {p.sensitive_action.text_en}
-                </p>
-              </div>
-            )}
-
-            {/* Swap Suggestion: required (indoors) is prominent; optional (caution) is softer */}
-            {p.swap && (p.swap.optional ? (
-              <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-600">
-                  <span className="font-semibold">Better slot available:</span> {swapText(p)}
-                </p>
-                <button className="text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-100 py-1 px-2.5 rounded-md shrink-0">
-                  Optional swap
-                </button>
-              </div>
-            ) : (
-              <div className="px-4 py-3 bg-blue-50/80 border-t border-blue-100">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-100 p-2 rounded-full shrink-0">
-                    <ArrowRightLeft className="w-4 h-4 text-blue-700" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900">{swapText(p)}</p>
-                    <button className="mt-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 py-1.5 px-3 rounded-md transition-colors shadow-sm">
-                      Apply Swap
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-8 px-6 text-center pb-6">
-        <p className="text-xs text-slate-400 font-medium">
+      {/* Provenance */}
+      <footer className="px-5 mt-6 pb-6 text-center space-y-1">
+        <p className="text-xs text-stone-500">
           {plan.mode === 'replay'
             ? `Source: recorded Open-Meteo data for ${plan.replay_date ?? plan.date} (not live, not calibrated)`
-            : `Source: ${sources.forecast} forecast${now?.calibrated ? ` calibrated with ${sources.observation}${sources.station ? ` (${sources.station})` : ''}` : ' (not calibrated)'}`}
+            : `Source: Open-Meteo (CAMS) forecast${now?.calibrated ? ` calibrated with ${sources.station ?? sources.observation}` : ' · not calibrated'}`}
         </p>
         {plan.mode !== 'replay' && !now?.calibrated && sources.note && (
-          <p className="text-[11px] text-amber-600 mt-1">{sources.note}</p>
+          <p className="text-[11px] text-amber-700 flex items-start justify-center gap-1"><Info className="w-3 h-3 mt-0.5 shrink-0" />{sources.note}</p>
         )}
-        <p className="text-[10px] text-slate-300 mt-1">
-          Last updated: {new Date(plan.generated_at).toLocaleString()}
-        </p>
+        <p className="text-[11px] text-stone-400">Hourly indicator using CPCB NAQI breakpoints · updated {new Date(plan.generated_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</p>
       </footer>
     </div>
   );

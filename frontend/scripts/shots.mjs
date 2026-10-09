@@ -10,7 +10,7 @@ const BASE = (process.argv[2] || process.env.SHOTS_URL || 'https://main.d6f34l6r
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/img');
 const VIEWPORT = { width: 375, height: 812 };
 
-const tab = (page, name) => page.locator(`nav [data-tab="${name}"], button:has-text("${name[0].toUpperCase() + name.slice(1)}")`).first();
+const tab = (page, name) => page.locator(`[data-tab="${name}"]`).first();
 
 async function waitForPlan(page) {
   // Today is ready when a period card or an error/retry state is visible.
@@ -20,7 +20,10 @@ async function waitForPlan(page) {
 
 async function shot(page, name) {
   const file = path.join(OUT, `${name}.png`);
+  // In a full-page capture, fixed bars (bottom nav, Ask input) would float mid-page; pin them to the end instead.
+  const style = await page.addStyleTag({ content: '[data-nav], form.fixed { position: static !important; transform: none !important; translate: none !important; } header.sticky { position: static !important; }' });
   await page.screenshot({ path: file, fullPage: true });
+  await style.evaluate((el) => el.remove());
   // Also flag horizontal overflow, which breaks the phone layout.
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   console.log(`${name}.png${overflow > 0 ? `  ⚠ horizontal overflow ${overflow}px` : ''}`);
@@ -51,6 +54,11 @@ await shot(page, 'today-live');
 await enableReplay(page);
 await shot(page, 'today-replay');
 
+// Today in Hindi (overflow check)
+await page.goto(`${BASE}/?lang=hi`, { waitUntil: 'networkidle' });
+await waitForPlan(page);
+await shot(page, 'today-hi');
+
 // Week
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await waitForPlan(page);
@@ -62,19 +70,19 @@ await shot(page, 'week');
 await tab(page, 'notice').click();
 await page.waitForTimeout(4000);
 await shot(page, 'notice-en');
-await page.getByRole('button', { name: /हिंदी/ }).first().click();
+await page.getByRole('button', { name: 'हिंदी', exact: true }).first().click();
 await page.waitForTimeout(4000);
 await shot(page, 'notice-hi');
-await page.getByRole('button', { name: /^\s*EN\s*$/ }).first().click().catch(() => {});
+await page.getByRole('button', { name: 'EN', exact: true }).first().click();
 
 // Ask (replay context)
 await enableReplay(page);
 await tab(page, 'ask').click();
 await page.getByRole('textbox').fill('Is PE at 8:40 safe?');
 await page.keyboard.press('Enter');
-await page.waitForTimeout(1500);
+await page.waitForTimeout(1200);
 await shot(page, 'ask-waiting');
-await page.waitForSelector('[data-testid="ask-answer"], .whitespace-pre-line', { timeout: 35000 });
+await page.locator('[data-testid="ask-answer"], p.text-rose-700').first().waitFor({ timeout: 35000 });
 await page.waitForTimeout(500);
 await shot(page, 'ask-answer');
 

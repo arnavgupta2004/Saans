@@ -83,11 +83,11 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | T17 | agent.py (Strands + Bedrock) | Cursor | T09, T02 | DONE (Bedrock call untested) | 5 tool fns + tests (58 pass); `ask()` uses BedrockModel Nova Lite; needs T02 Bedrock access for a manual smoke test. |
 | T18 | /api/ask + polished notice | Cursor | T17 | CUT | /api/ask wired to agent with deterministic fallback; `polish=true` cut (stays 501). |
 | T19 | Daily EventBridge job | Cursor | T12 | DONE (deployed + invoked OK 22:38 IST) | `DailyFunction` (jobs/daily.py) via EventBridge Scheduler `cron(0 6 * * ? *)` Asia/Kolkata → saans-cache `school_id#date` {rows, sources, plan, stored_at}. /today serves it as mode "cached" if < 3 h old (re-planned so `now` is current; generated_at = fetch time), else live; cache errors → live. |
-| T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE (minimal) | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
+| T20 | Frontend Ask Saans chat | Antigravity | T18 | DONE | `AskView.tsx`: question box, answer, "✓ numbers checked" when verified; shares replay toggle with Today (state lifted to App). |
 | T21 | Amplify Hosting | Human + Any | T13 | TODO | |
 | T22 | Replay mode | Any | T09, T13 | DONE | `/today?replay=delhi-nov` → recorded Open-Meteo day 2025-11-19 (`fixtures/replay_delhi_nov.json`), mode=replay, `replay_date`; frontend banner + "Try a bad-air day" link. Morning Very Poor (351) → PE swap to 13:00 (Moderate). |
 | T23 | Resilience pass | Antigravity | T21 | DONE | backend/tests/test_resilience.py: Open-Meteo, CPCB/OpenAQ, Gemini down one at a time and all together → 200 with honest mode/source/note. Frontend: `modeBanner()` (replay/fixture/cached) + vitest; error screen has Retry (never blank); empty timetable message. |
-| T24 | UI polish | Antigravity | T13–T16 | TODO | |
+| T24 | UI polish | Antigravity | T13–T16 | DONE (Claude) | Calm stone/teal palette, Saans wordmark header (school picker + EN/हिंदी), Today: big AQI in band colour, 500+ beyond-scale line, one-line verdict, go/caution/indoors icons, outdoor cards only (indoor classes collapsed), swap cards (required sky, optional grey), banners, amber calibration note. Ask: chat, progress steps, typing dots, "Show plan summary now" after 8 s (client-side from /today), ✓ numbers checked, model name. Notice follows global language + replay. Week: honest chart. Deep links ?replay=delhi-nov&tab=ask&lang=hi&school=… |
 | T25 | README | Any | T21 | TODO | |
 | T26 | Demo video | Human | T24 | TODO | |
 | T27 | AWS Builder Center blog | Human (+agent draft) | T25 | TODO | |

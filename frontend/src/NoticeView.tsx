@@ -1,99 +1,64 @@
 import React, { useEffect, useState } from 'react';
-import { getNotice } from './api';
+import { getNotice, REPLAY_KEY } from './api';
 import { useLanguage } from './LanguageContext';
 import { Copy, Share2, Check } from 'lucide-react';
 
-export default function NoticeView({ activeSchoolId = 'delhi-anand-vihar' }: { activeSchoolId?: string }) {
+/** Parent notice in the app's current language (EN/HI toggle in the header), for live or replay data. */
+export default function NoticeView({ activeSchoolId = 'delhi-anand-vihar', replay = false }: { activeSchoolId?: string; replay?: boolean }) {
   const { lang, t } = useLanguage();
-  const [noticeLang, setNoticeLang] = useState<'en'|'hi'>(lang);
-  const [noticeData, setNoticeData] = useState<any>(null);
+  const [notice, setNotice] = useState<{ text: string; whatsapp_url: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchNotice = async () => {
-      setLoading(true);
-      try {
-        const data = await getNotice(activeSchoolId, noticeLang);
-        setNoticeData(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotice();
-  }, [noticeLang, activeSchoolId]);
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    getNotice(activeSchoolId, lang, replay ? REPLAY_KEY : undefined)
+      .then((d) => { if (!cancelled) setNotice(d); })
+      .catch(() => { if (!cancelled) setError(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeSchoolId, lang, replay]);
 
-  const handleCopy = () => {
-    if (noticeData) {
-      navigator.clipboard.writeText(noticeData.text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const copy = () => {
+    if (!notice) return;
+    navigator.clipboard.writeText(notice.text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading && !noticeData) {
-    return <div className="flex h-screen items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 w-full max-w-md mx-auto shadow-xl overflow-hidden sm:rounded-2xl sm:my-8 border border-slate-200 flex flex-col">
-      <header className="bg-white px-5 pt-6 pb-4 border-b border-slate-100 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('parentNotice')}</h1>
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-          <button 
-            className={`px-3 py-1 rounded-md text-sm font-bold transition ${noticeLang === 'en' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-            onClick={() => setNoticeLang('en')}
-          >
-            EN
+    <div className="px-4 pt-5 pb-6">
+      <h1 className="text-xl font-semibold text-stone-900">{t('parentNotice')}</h1>
+      <p className="text-xs text-stone-500 mt-0.5">{lang === 'hi' ? 'भाषा बदलने के लिए ऊपर EN / हिंदी चुनें' : 'Switch EN / हिंदी at the top to change the language'}</p>
+
+      <div className="mt-4 bg-white rounded-2xl border border-stone-200/80 p-4 min-h-40">
+        {loading && !notice ? (
+          <div className="animate-pulse space-y-3">
+            <div className="h-3.5 bg-stone-200 rounded w-3/4" />
+            <div className="h-3.5 bg-stone-200 rounded w-full" />
+            <div className="h-3.5 bg-stone-200 rounded w-5/6" />
+          </div>
+        ) : error && !notice ? (
+          <p className="text-sm text-rose-700">Could not load the notice. Please try again.</p>
+        ) : notice && (
+          <p className={`text-stone-800 whitespace-pre-wrap leading-relaxed text-[15px] break-words ${loading ? 'opacity-60' : ''}`}>{notice.text}</p>
+        )}
+      </div>
+
+      {notice && (
+        <div className="mt-4 space-y-2.5">
+          <button onClick={copy} className="w-full bg-white border border-stone-300 text-stone-800 font-medium py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
+            {copied ? <Check className="w-4 h-4 text-emerald-600 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
+            <span className="truncate">{copied ? t('copied') : t('copyToClipboard')}</span>
           </button>
-          <button 
-            className={`px-3 py-1 rounded-md text-sm font-bold transition ${noticeLang === 'hi' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-            onClick={() => setNoticeLang('hi')}
-          >
-            हिंदी
-          </button>
+          <a href={notice.whatsapp_url} target="_blank" rel="noopener noreferrer" className="w-full bg-[#25D366] text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
+            <Share2 className="w-4 h-4 shrink-0" /> <span className="truncate">{t('shareOnWhatsapp')}</span>
+          </a>
         </div>
-      </header>
-
-      <main className="px-5 mt-6 flex-1">
-        {loading ? (
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-            <div className="h-4 bg-slate-200 rounded w-full"></div>
-            <div className="h-4 bg-slate-200 rounded w-5/6"></div>
-          </div>
-        ) : noticeData && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative">
-            <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-[15px]">
-              {noticeData.text}
-            </p>
-          </div>
-        )}
-
-        {noticeData && (
-          <div className="mt-6 space-y-3">
-            <button 
-              onClick={handleCopy}
-              className="w-full bg-white border-2 border-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-50 transition flex items-center justify-center gap-2"
-            >
-              {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
-              {copied ? t('copied') : t('copyToClipboard')}
-            </button>
-            
-            <a 
-              href={noticeData.whatsapp_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full bg-[#25D366] text-white font-bold py-3 rounded-xl hover:bg-[#128C7E] transition flex items-center justify-center gap-2"
-            >
-              <Share2 className="w-5 h-5" />
-              {t('shareOnWhatsapp')}
-            </a>
-          </div>
-        )}
-      </main>
+      )}
     </div>
   );
 }

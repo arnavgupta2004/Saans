@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Period, School } from './types';
 import { saveSchool } from './api';
 import { MapPin, Plus, Trash2, Save } from 'lucide-react';
+import { useLanguage } from './LanguageContext';
 
 const CITY_PRESETS = [
   { id: 'delhi-anand-vihar', label: 'Delhi – Anand Vihar', lat: 28.6469, lon: 77.3159 },
@@ -15,6 +16,7 @@ const DEFAULT_PERIODS: Period[] = [
 ];
 
 export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoolId: string, onSave: (s: School) => void }) {
+  const { lang } = useLanguage();
   const initialPreset = CITY_PRESETS.find(p => p.id === activeSchoolId) ?? CITY_PRESETS[0];
   const [name, setName] = useState('Demo School');
   const [cityPreset, setCityPreset] = useState(initialPreset.id);
@@ -100,71 +102,72 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 w-full max-w-md mx-auto sm:rounded-2xl sm:my-8 relative">
-      <header className="bg-white px-5 pt-6 pb-4 border-b border-slate-100">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">School Setup</h1>
+    <div className="pb-6">
+      <header className="px-4 pt-5">
+        <h1 className="text-xl font-semibold text-stone-900">{lang === 'hi' ? 'स्कूल सेटअप' : 'School setup'}</h1>
+        <p className="text-xs text-stone-500 mt-0.5">{lang === 'hi' ? 'स्थान, बाहरी समय-सारणी और अस्थमा वाले विद्यार्थियों की संख्या (केवल संख्या)।' : 'Location, outdoor timetable and number of students with asthma (a count only).'}</p>
       </header>
 
-      <main className="px-5 mt-6 space-y-6">
+      <main className="px-4 mt-4 space-y-6">
         <section className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">School Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold" />
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">School Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-white border border-stone-200 rounded-lg p-2.5 text-sm font-semibold" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Location</label>
-            <select value={cityPreset} onChange={handleCityChange} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold">
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Location</label>
+            <select value={cityPreset} onChange={handleCityChange} className="w-full bg-white border border-stone-200 rounded-lg p-2.5 text-sm font-semibold">
               {CITY_PRESETS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
             <button
               type="button"
               onClick={handleLocation}
-              className="mt-2 w-full bg-slate-100 hover:bg-slate-200 p-2.5 rounded-lg text-slate-700 text-sm font-semibold transition flex items-center justify-center gap-2"
+              className="mt-2 w-full bg-stone-100 hover:bg-stone-200 p-2.5 rounded-lg text-stone-700 text-sm font-semibold transition flex items-center justify-center gap-2"
             >
               <MapPin className="w-4 h-4" />
               Use my location
             </button>
             {usingMyLocation && (
-              <p className="text-xs text-slate-400 mt-1">Lat: {lat.toFixed(4)}, Lon: {lon.toFixed(4)}</p>
+              <p className="text-xs text-stone-400 mt-1">Lat: {lat.toFixed(4)}, Lon: {lon.toFixed(4)}</p>
             )}
             {geoError && <p className="text-xs text-red-600 mt-1">{geoError}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Students with Asthma</label>
-            <input type="number" min={0} value={asthmaCount} onChange={e => setAsthmaCount(parseInt(e.target.value) || 0)} className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold" />
-            <p className="text-[10px] text-slate-400 mt-1 font-medium italic">count only — no names or health records</p>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Students with Asthma</label>
+            <input type="number" min={0} value={asthmaCount} onChange={e => setAsthmaCount(parseInt(e.target.value) || 0)} className="w-full bg-white border border-stone-200 rounded-lg p-2.5 text-sm font-semibold" />
+            <p className="text-[10px] text-stone-400 mt-1 font-medium italic">count only — no names or health records</p>
           </div>
         </section>
 
         <section>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Timetable Editor</h2>
-            <button type="button" onClick={addPeriod} className="text-blue-600 flex items-center gap-1 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">
+            <h2 className="text-xs font-bold text-stone-500 uppercase tracking-wider">Timetable Editor</h2>
+            <button type="button" onClick={addPeriod} className="text-teal-700 flex items-center gap-1 text-xs font-bold bg-teal-50 px-2 py-1 rounded-md">
               <Plus className="w-3 h-3" /> Add Row
             </button>
           </div>
           
           <div className="space-y-3">
             {periods.map((p) => (
-              <div key={p.id} className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm relative">
-                <button type="button" onClick={() => removePeriod(p.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition" aria-label="Remove period">
+              <div key={p.id} className="bg-white border border-stone-200 p-3 rounded-xl shadow-sm relative">
+                <button type="button" onClick={() => removePeriod(p.id)} className="absolute top-2 right-2 text-stone-300 hover:text-red-500 transition" aria-label="Remove period">
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
-                  <input type="text" value={p.label} onChange={e => updatePeriod(p.id, 'label', e.target.value)} placeholder="Period Label" className="col-span-2 bg-slate-50 border border-slate-100 rounded p-1.5 text-sm font-semibold w-full" />
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                  <input type="text" value={p.label} onChange={e => updatePeriod(p.id, 'label', e.target.value)} placeholder="Period Label" className="col-span-2 bg-stone-50 border border-stone-100 rounded p-1.5 text-sm font-semibold w-full" />
+                  <label className="text-[10px] font-bold text-stone-400 uppercase">
                     Start
-                    <input type="time" value={p.start} onChange={e => updatePeriod(p.id, 'start', e.target.value)} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800" />
+                    <input type="time" value={p.start} onChange={e => updatePeriod(p.id, 'start', e.target.value)} className="mt-0.5 bg-stone-50 border border-stone-100 rounded p-1.5 text-xs font-medium w-full text-stone-800" />
                   </label>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase">
                     End
-                    <input type="time" value={p.end} onChange={e => updatePeriod(p.id, 'end', e.target.value)} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800" />
+                    <input type="time" value={p.end} onChange={e => updatePeriod(p.id, 'end', e.target.value)} className="mt-0.5 bg-stone-50 border border-stone-100 rounded p-1.5 text-xs font-medium w-full text-stone-800" />
                   </label>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase">
                     Type
-                    <select value={p.type} onChange={e => updatePeriod(p.id, 'type', e.target.value as Period['type'])} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800">
+                    <select value={p.type} onChange={e => updatePeriod(p.id, 'type', e.target.value as Period['type'])} className="mt-0.5 bg-stone-50 border border-stone-100 rounded p-1.5 text-xs font-medium w-full text-stone-800">
                       <option value="class">Class</option>
                       <option value="pe">PE</option>
                       <option value="assembly">Assembly</option>
@@ -172,21 +175,21 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
                       <option value="sports">Sports</option>
                     </select>
                   </label>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase">
                     Intensity
-                    <select value={p.intensity} onChange={e => updatePeriod(p.id, 'intensity', e.target.value as Period['intensity'])} className="mt-0.5 bg-slate-50 border border-slate-100 rounded p-1.5 text-xs font-medium w-full text-slate-800">
+                    <select value={p.intensity} onChange={e => updatePeriod(p.id, 'intensity', e.target.value as Period['intensity'])} className="mt-0.5 bg-stone-50 border border-stone-100 rounded p-1.5 text-xs font-medium w-full text-stone-800">
                       <option value="low">Low</option>
                       <option value="high">High</option>
                     </select>
                   </label>
                 </div>
                 <div className="flex gap-4 items-center">
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                    <input type="checkbox" checked={p.outdoor} onChange={e => updatePeriod(p.id, 'outdoor', e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
+                    <input type="checkbox" checked={p.outdoor} onChange={e => updatePeriod(p.id, 'outdoor', e.target.checked)} className="rounded border-stone-300 text-teal-700 focus:ring-teal-500" />
                     Outdoor
                   </label>
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                    <input type="checkbox" checked={p.swappable} onChange={e => updatePeriod(p.id, 'swappable', e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
+                    <input type="checkbox" checked={p.swappable} onChange={e => updatePeriod(p.id, 'swappable', e.target.checked)} className="rounded border-stone-300 text-teal-700 focus:ring-teal-500" />
                     Swappable
                   </label>
                 </div>
@@ -195,7 +198,7 @@ export default function OnboardingView({ activeSchoolId, onSave }: { activeSchoo
           </div>
         </section>
 
-        <button type="button" onClick={handleSave} disabled={saveState === 'saving'} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-60">
+        <button type="button" onClick={handleSave} disabled={saveState === 'saving'} className="w-full bg-teal-700 text-white font-bold py-3 rounded-xl hover:bg-teal-800 transition flex items-center justify-center gap-2 disabled:opacity-60">
           <Save className="w-5 h-5" /> {saveState === 'saving' ? 'Saving…' : 'Save Configuration'}
         </button>
         {saveState === 'saved' && <p className="text-center text-sm text-green-700 font-medium">Saved (mock API).</p>}

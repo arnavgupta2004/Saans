@@ -61,11 +61,12 @@ export const saveSchool = async (school: School): Promise<School> => {
   return response.json();
 };
 
-export const getNotice = async (schoolId: string, lang: 'en' | 'hi') => {
+export const getNotice = async (schoolId: string, lang: 'en' | 'hi', replay?: string) => {
   if (USE_MOCK) {
     return lang === 'en' ? mockNoticeEn : mockNoticeHi;
   }
-  const response = await fetch(`${API_URL}/schools/${schoolId}/notice?lang=${lang}&polish=false`);
+  const params = new URLSearchParams({ lang, polish: 'false', ...(replay ? { replay } : {}) });
+  const response = await fetch(`${API_URL}/schools/${schoolId}/notice?${params}`);
   if (!response.ok) throw new Error('Failed to fetch notice');
   return response.json();
 };
@@ -81,8 +82,9 @@ export interface AskResponse {
   model?: string | null;
 }
 
-export const askSaans = async (schoolId: string, question: string, lang: 'en' | 'hi', replay?: string): Promise<AskResponse> => {
+export const askSaans = async (schoolId: string, question: string, lang: 'en' | 'hi', replay?: string, signal?: AbortSignal): Promise<AskResponse> => {
   const response = await fetch(`${API_URL}/ask`, {
+    signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ school_id: schoolId, question, lang, ...(replay ? { replay } : {}) }),
