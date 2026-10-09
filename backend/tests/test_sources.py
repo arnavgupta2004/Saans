@@ -237,3 +237,10 @@ def test_note_flows_into_dayplan() -> None:
     rows = [{"time": "2026-10-09T09:00", "pm25": 50, "pm10": 60}]
     p = plan_day(SEED_SCHOOLS[0], rows, "2026-10-09", {"forecast": "live", "observation": "none", "note": "Not calibrated: x"})
     assert p.sources.note == "Not calibrated: x"
+
+
+def test_open_meteo_null_hours_are_dropped() -> None:
+    _Cache.values.clear()
+    body = {"hourly": {"time": ["2026-10-14T05:00", "2026-10-14T06:00", "2026-10-14T07:00"], "pm2_5": [40, None, 50], "pm10": [60, 70, None]}}
+    rows = OpenMeteoClient(httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))).hourly(1, 2)
+    assert [r["time"] for r in rows] == ["2026-10-14T05:00"]

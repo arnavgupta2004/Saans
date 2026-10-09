@@ -124,3 +124,10 @@ def action_for(activity_type: str, intensity: str, band: str, sensitive: bool = 
 
 
 INDOOR_ACTION = Action("go", "Indoor class — no change needed", "इनडोर कक्षा — किसी बदलाव की आवश्यकता नहीं", "SAANS-INDOOR")
+# A period whose hours have no forecast must never read as safe.
+NO_DATA_ACTION = Action(
+    "caution",
+    "No forecast for this time; follow the school's standard air-quality protocol.",
+    "इस समय का पूर्वानुमान उपलब्ध नहीं है; विद्यालय के सामान्य वायु-गुणवत्ता नियम अपनाएँ।",
+    "SAANS-NO-DATA",
+)

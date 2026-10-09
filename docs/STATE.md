@@ -56,6 +56,7 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 | Fri 9 Oct 2026 (T23) | Claude | 144 passed | passed (+ vitest 4 passed) |
 | Fri 9 Oct 2026 (attempt timeout) | Claude | 148 passed | — |
 | Fri 9 Oct 2026 (replay tool dates) | Claude | 151 passed | — |
+| Sat 10 Oct 2026 (null hours / no-data) | Claude | 155 passed | — |
 | Fri 9 Oct 2026, 18:05 IST | Cursor | collection error (`mangum` missing in this env; PYTHONPATH=. needed) | passed |
 
 ---
@@ -126,6 +127,8 @@ curl $URL/api/health; curl $URL/api/schools/delhi-anand-vihar/today
 - 2026-10-09 — Live Ask after f48f9af (Claude, 23:09 IST): #1 primary gemini-3.8-flash failed (~18 s, overloaded) → 6 s left → plan summary at 22 s (as designed); #2 answered by fallback gemini-3.5-flash-lite in 14 s but said it "cannot retrieve plan data" — model passed the replay key as `date`. Fix: replay tools ignore `date`; live tools return {"error": "...Available dates: ..."} for unknown dates instead of raising; replay prompt context names the recorded date (2025-11-19), not the key. NEEDS REDEPLOY.
 - 2026-10-09 — Live Ask verified (Claude, 23:20 IST, after e6393c8): #1 primary ReadTimeout (10 s) → fallback gemini-3.5-flash-lite answered in 19.6 s, verified, tools get_hourly_forecast+get_day_plan, correct (AQI 351, Hold PE indoors, replay date stated). #2 gemini-3.8-flash answered in 8.6 s, verified, incl. swap ⇄ Period 8 13:40 AQI 127 and "uncalibrated". Item 1 (retry → fallback model → plan summary) confirmed live.
 - 2026-10-09 — Alarm notifications (Claude): `AlertEmail` SAM param (default empty) → condition HasAlertEmail → SNS topic `saans-alerts` + email subscription; both alarms' AlarmActions → topic. Subscription must be confirmed from the inbox. Agent deploy attempts failed twice with S3 UploadPart RequestTimeout from the agent sandbox; human to run `sam deploy ... --parameter-overrides AlertEmail=<email>` (other params keep previous values via SAM UsePreviousValue).
+- 2026-10-10 — SNS alerts live (Claude, ~00:30 IST): topic saans-alerts, email subscription CONFIRMED (has subscription ARN), both alarms → topic; Ask still OK (gemini-3.5-flash-lite, verified) so keys survived the param-only deploy.
+- 2026-10-10 — LIVE BUG /today 500 after midnight (Claude): Open-Meteo returns null PM for the last horizon hours (2026-10-14 06:00–23:00) → calibrate float(None) TypeError. Fix: OpenMeteoClient drops null hours. Safety fix found alongside: planner treated a period with no forecast rows as AQI 0 "Good"/go → now band "No data", `NO_DATA_ACTION` (caution, rule SAANS-NO-DATA), never moved/targeted by swaps; plan_week/best_day only use `complete_days` (all hours 07–16 present). NEEDS REDEPLOY.
 - 2026-10-09 — Added lucide-react and recharts dependencies for frontend UI components.
 
 ## Known issues / surprises

@@ -44,7 +44,8 @@ class OpenMeteoClient:
         except Exception:
             data = _load("open_meteo_delhi_anand_vihar.json"); source = "fixture"
         h = data["hourly"]
-        rows = [{"time": t, "pm25": p25, "pm10": p10, "source": source} for t,p25,p10 in zip(h["time"],h["pm2_5"],h["pm10"])]
+        # Hours at the end of the forecast horizon come back as null: they are not forecast yet, so drop them.
+        rows = [{"time": t, "pm25": p25, "pm10": p10, "source": source} for t,p25,p10 in zip(h["time"],h["pm2_5"],h["pm10"]) if p25 is not None and p10 is not None]
         # Fixture data is never cached, so the next request retries the live API.
         return _Cache.put(key, rows) if source == "live" else rows
 

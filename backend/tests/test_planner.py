@@ -1,5 +1,5 @@
 from saans.models import Period,School
-from saans.planner import best_day,plan_day
+from saans.planner import best_day,plan_day,plan_week
 def school():
  return School(id="x",name="X",city="Delhi",lat=0,lon=0,sensitive_count=1,timetable=[Period(id="pe",label="PE",start="08:40",end="09:20",type="pe",intensity="high",outdoor=True,swappable=True),Period(id="slot",label="Class",start="13:00",end="13:40",type="class",intensity="low",outdoor=False,swappable=True)])
 def rows():
@@ -9,7 +9,8 @@ def test_period_max_and_clean_swap():
 def test_no_swap_into_non_swappable():
  s=school(); s.timetable[1].swappable=False; assert plan_day(s,rows(),"2026-10-09").periods[0].swap is None
 def test_best_day_orders_max_then_mean():
- rs=rows()+[dict(x,time=x["time"].replace("09","10")) for x in []]+[{"time":"2026-10-10T09:00","pm25":40,"pm10":40,"pm25_cal":40,"pm10_cal":40}]
+ day=lambda d,pm:[{"time":f"{d}T{h:02d}:00","pm25":pm,"pm10":pm,"pm25_cal":pm,"pm10_cal":pm} for h in range(24)]
+ rs=day("2026-10-09",200)+day("2026-10-10",40)
  assert best_day(school(),rs,"09:00","09:59")["ranking"][0]["date"]=="2026-10-10"
 def test_delhi_plan_table(capsys):
  p=plan_day(school(),rows(),"2026-10-09"); print("Period | AQI | Band | Action | Swap\nPE | 362 | Very Poor | indoors | 13:00–13:40 (AQI 33, Good)"); assert p.periods[0].swap
@@ -118,3 +119,18 @@ def test_optional_swap_follows_same_rules():
  s=School(id="z",name="Z",city="D",lat=0,lon=0,timetable=[t("pe","09:00","09:40","pe","high",True,True),t("out","13:00","13:40","sports","high",True,True),t("c","14:00","14:40","class","low",False,True)])
  p=plan_day(s,[_hr(9,80),_hr(13,5),_hr(14,20)],"2026-10-09").periods[0]
  assert p.swap.optional and p.swap.with_period_id=="c"
+
+# --- missing forecast hours must never read as "Good" ---
+def test_outdoor_period_without_data_is_not_go():
+ p=plan_day(_school2(),[_hr(13,20)],"2026-10-09").periods[0]   # PE 08:40 has no rows
+ assert p.action.level!="go" and p.action.rule_id=="SAANS-NO-DATA" and p.band=="No data" and p.swap is None
+
+def test_no_data_slot_is_not_a_swap_target():
+ p=plan_day(_school2(),[_hr(8,200),_hr(9,200),_hr(14,5)],"2026-10-09").periods[0]  # only c2 13:00 & c3 15:00 lack/hold data
+ assert p.swap is None or p.swap.with_period_id!="c2"
+
+def test_week_and_best_day_skip_days_without_school_hours():
+ full=[{"time":f"2026-10-09T{h:02d}:00","pm25":50,"pm10":60} for h in range(24)]
+ partial=[{"time":f"2026-10-10T{h:02d}:00","pm25":5,"pm10":5} for h in range(0,6)]   # horizon ends 05:00
+ assert [d["date"] for d in plan_week(_school2(),full+partial)["days"]]==["2026-10-09"]
+ assert [r["date"] for r in best_day(_school2(),full+partial,"09:00","12:00")["ranking"]]==["2026-10-09"]
