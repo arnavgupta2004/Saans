@@ -1,0 +1,112 @@
+{
+  "school_id": "demo-delhi",
+  "date": "2026-10-09",
+  "now": {
+    "time": "2026-10-09T08:00:00Z",
+    "pm25": 145,
+    "pm10": 210,
+    "pm25_cal": 150,
+    "pm10_cal": 220,
+    "aqi": 312,
+    "band": "Very Poor",
+    "calibrated": true
+  },
+  "periods": [
+    {
+      "period": {
+        "id": "p1",
+        "label": "Morning Assembly",
+        "start": "08:00",
+        "end": "08:30",
+        "type": "assembly",
+        "intensity": "low",
+        "outdoor": true,
+        "swappable": false
+      },
+      "aqi": 312,
+      "band": "Very Poor",
+      "action": {
+        "level": "indoors",
+        "text_en": "Hold assembly indoors (over PA or in classrooms).",
+        "text_hi": "प्रार्थना सभा घर के अंदर (PA या कक्षाओं में) आयोजित करें।",
+        "rule_id": "rule_assembly_vp"
+      },
+      "sensitive_action": {
+        "level": "indoors",
+        "text_en": "Keep students with asthma indoors.",
+        "text_hi": "अस्थमा वाले छात्रों को अंदर रखें।",
+        "rule_id": "rule_sens_vp"
+      }
+    },
+    {
+      "period": {
+        "id": "p2",
+        "label": "Class 7B PE",
+        "start": "08:40",
+        "end": "09:30",
+        "type": "pe",
+        "intensity": "high",
+        "outdoor": true,
+        "swappable": true,
+        "grade": "7B"
+      },
+      "aqi": 312,
+      "band": "Very Poor",
+      "action": {
+        "level": "indoors",
+        "text_en": "Move high-intensity activities indoors.",
+        "text_hi": "उच्च-तीव्रता वाली गतिविधियों को अंदर करें।",
+        "rule_id": "rule_pe_vp"
+      },
+      "sensitive_action": {
+        "level": "indoors",
+        "text_en": "Keep students with asthma indoors.",
+        "text_hi": "अस्थमा वाले छात्रों को अंदर रखें।",
+        "rule_id": "rule_sens_vp"
+      },
+      "swap": {
+        "to_start": "13:30",
+        "to_end": "14:20",
+        "to_aqi": 198,
+        "to_band": "Moderate",
+        "gain_bands": 2
+      }
+    },
+    {
+      "period": {
+        "id": "p3",
+        "label": "Recess",
+        "start": "11:30",
+        "end": "12:00",
+        "type": "recess",
+        "intensity": "low",
+        "outdoor": true,
+        "swappable": false
+      },
+      "aqi": 215,
+      "band": "Poor",
+      "action": {
+        "level": "caution",
+        "text_en": "Keep recess short (≤15 min).",
+        "text_hi": "छुट्टी का समय छोटा (≤15 मिनट) रखें।",
+        "rule_id": "rule_recess_p"
+      },
+      "sensitive_action": {
+        "level": "indoors",
+        "text_en": "Keep 38 students with asthma indoors.",
+        "text_hi": "अस्थमा वाले 38 छात्रों को अंदर रखें।",
+        "rule_id": "rule_sens_p"
+      }
+    }
+  ],
+  "worst_hour": "08:00",
+  "best_hour": "14:00",
+  "sources": {
+    "forecast": "Open-Meteo",
+    "observation": "CPCB",
+    "station": "Anand Vihar, Delhi",
+    "distance_km": 4.2
+  },
+  "mode": "live",
+  "generated_at": "2026-10-09T06:00:00Z"
+}
