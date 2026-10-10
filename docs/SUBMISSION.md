@@ -1,6 +1,6 @@
 # Submission form — copy-paste text
 
-> Fill the two placeholders (`<VIDEO_URL>`, `<BLOG_URL>`) and make the GitHub repo public before submitting.
+> Fill the placeholder `<BLOG_URL>` and make the GitHub repo public before submitting.
 
 ## Project name
 Saans — AQI-smart timetables for schools
@@ -50,5 +50,5 @@ Air pollution peaks hour by hour, not day by day: in Delhi's winter, PM2.5 build
 - **Bad-air day (recorded, 19 Nov 2025):** https://main.d6f34l6r9rpi9.amplifyapp.com/?replay=delhi-nov
 - **API health:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com/api/health
 - **Code:** https://github.com/arnavgupta2004/Saans
-- **Demo video:** `<VIDEO_URL>`
+- **Demo video:** https://youtu.be/X5oNj2PFbpo
 - **AWS Builder Center blog:** `<BLOG_URL>`

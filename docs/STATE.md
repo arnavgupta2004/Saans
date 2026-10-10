@@ -18,8 +18,8 @@
 - [ ] **Repo public** — currently PRIVATE (`gh repo edit arnavgupta2004/Saans --visibility public --accept-visibility-change-consequences`). History scanned: no API keys or .env files committed.
 - [x] **Live app:** https://main.d6f34l6r9rpi9.amplifyapp.com (replay: `/?replay=delhi-nov`, Ask: `/?replay=delhi-nov&tab=ask`)
 - [x] **API:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com/api/health
-- [ ] **Demo video link:** `<VIDEO_URL>` — video built (video/saans-demo.mp4); human records VO from docs/video/SCRIPT.md, merges, uploads
-- [x] **Form text:** docs/SUBMISSION.md (fill `<VIDEO_URL>`, `<BLOG_URL>`)
+- [x] **Demo video link:** https://youtu.be/X5oNj2PFbpo (YouTube, uploaded 10 Oct)
+- [x] **Form text:** docs/SUBMISSION.md (fill `<BLOG_URL>`)
 - [ ] **AWS Builder Center blog link:** `<BLOG_URL>` — draft in docs/BLOG.md
 - [x] **Track:** 01 — Air ("School safety on bad days")
 - [x] **Team:** Chernobyl (Arnav Gupta — lead; Avishi) — [ ] Avishi accepted the team invite (team locks after submit)
@@ -123,7 +123,7 @@ PASS  frontend loads                                             200  0.26s
 | T23 | Resilience pass | Antigravity | T21 | DONE | backend/tests/test_resilience.py: Open-Meteo, CPCB/OpenAQ, Gemini down one at a time and all together → 200 with honest mode/source/note. Frontend: `modeBanner()` (replay/fixture/cached) + vitest; error screen has Retry (never blank); empty timetable message. |
 | T24 | UI polish | Antigravity | T13–T16 | DONE (Claude) | Calm stone/teal palette, Saans wordmark header (school picker + EN/हिंदी), Today: big AQI in band colour, 500+ beyond-scale line, one-line verdict, go/caution/indoors icons, outdoor cards only (indoor classes collapsed), swap cards (required sky, optional grey), banners, amber calibration note. Ask: chat, progress steps, typing dots, "Show plan summary now" after 8 s (client-side from /today), ✓ numbers checked, model name. Notice follows global language + replay. Week: honest chart. Deep links ?replay=delhi-nov&tab=ask&lang=hi&school=… |
 | T25 | README | Any | T21 | DONE (Claude) | Judge-facing README: cited problem (WHO 2018, Lancet Planet Health 2024, GRAP IV Nov 2024, Murthy 2020), [CITE] where unverified, screenshots, mermaid, AWS services, science, limitations, run/deploy, team. Also docs/BLOG.md (~950 words) and docs/VIDEO.md (3:00 shot list + checklist). |
-| T26 | Demo video | Human | T24 | TODO | |
+| T26 | Demo video | Human | T24 | DONE | https://youtu.be/X5oNj2PFbpo |
 | T27 | AWS Builder Center blog | Human (+agent draft) | T25 | TODO | |
 | T28 | Final checklist | Human | all | IN PROGRESS | See "Submission checklist" under Resume here. |
 | T29 | Submit | Human | T28 | TODO | |
