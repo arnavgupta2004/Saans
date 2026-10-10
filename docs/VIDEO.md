@@ -1,5 +1,7 @@
 # Saans — 3:00 demo video
 
+> **Superseded (10 Oct):** the video is now generated: `node docs/video/make_video.mjs` → `video/saans-demo.mp4` (clean) + `video/saans-demo-prompter.mp4` (read-along). The voice-over to read is **`docs/video/SCRIPT.md`** (generated from `docs/video/scenes.mjs`). The table below is the original plan.
+
 Pace: ~100–110 words per minute with pauses, short sentences. Total voice-over ≈ 285 words, leaving room to breathe.
 Record the app in a **phone-sized browser window (375×812)**, screen at 1080p. Captions are burned in (many judges watch muted).
 
