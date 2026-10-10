@@ -7,7 +7,7 @@
 **Submission deadline (confirm on event page):** Sun 11 Oct, ____ IST  ·  **Feature freeze:** Sun 11 Oct, 12:00 IST
 **Deployed API URL:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com
 **Deployed frontend URL:** https://main.d6f34l6r9rpi9.amplifyapp.com (Amplify app d6f34l6r9rpi9, Git-connected, branch main)
-**Repo:** https://github.com/arnavgupta2004/Saans (PRIVATE — make public before submitting)
+**Repo:** https://github.com/arnavgupta2004/Saans (public — verified 10 Oct)
 
 ---
 
@@ -15,7 +15,7 @@
 **Final status (Claude, Sat 10 Oct 2026 ~02:20 IST):** feature-complete and deployed. Backend 167 tests, frontend tsc + build + 10 vitest pass. Live: /today (live + replay) for all 3 schools, week, best-day, notice EN/HI, Ask (gemini-3.5-flash-lite, verified), daily job, alarms → SNS email. Judge/QA pass fixes deployed (see Decisions 2026-10-10). Remaining work is human: video, blog, repo visibility, submission.
 
 ### Submission checklist
-- [ ] **Repo public** — currently PRIVATE (`gh repo edit arnavgupta2004/Saans --visibility public --accept-visibility-change-consequences`). History scanned: no API keys or .env files committed.
+- [x] **Repo public** — verified via GitHub API, 10 Oct
 - [x] **Live app:** https://main.d6f34l6r9rpi9.amplifyapp.com (replay: `/?replay=delhi-nov`, Ask: `/?replay=delhi-nov&tab=ask`)
 - [x] **API:** https://qcx2qrt6bj.execute-api.us-east-1.amazonaws.com/api/health
 - [x] **Demo video link:** https://youtu.be/X5oNj2PFbpo (YouTube, uploaded 10 Oct)

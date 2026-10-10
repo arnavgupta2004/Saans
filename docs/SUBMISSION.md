@@ -1,6 +1,6 @@
 # Submission form — copy-paste text
 
-> Fill the placeholder `<BLOG_URL>` and make the GitHub repo public before submitting.
+> Fill the placeholder `<BLOG_URL>` before submitting.
 
 ## Project name
 Saans — AQI-smart timetables for schools
